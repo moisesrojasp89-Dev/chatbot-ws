@@ -330,25 +330,27 @@ export class InboundDispatcher {
       return;
     }
 
-    const primaryPayload = primaryEvent.payload;
-    const primaryMsg = primaryPayload?.message || {};
-    const primaryText = primaryMsg.text?.body || primaryMsg.interactive?.button_reply?.title || '';
-    const senderName = primaryPayload?.contact?.profile?.name || 'Cliente';
+    const primaryPayload = primaryEvent.payload as {
+      text?: string;
+      type?: string;
+      senderName?: string;
+    } | null;
+    const primaryText = primaryPayload?.text ?? '';
+    const senderName = primaryPayload?.senderName || 'Cliente';
     const from = primaryEvent.sender_phone;
 
     // C9: Concatenación en memoria para la llamada al LLM
     const texts: string[] = [];
     if (primaryText) texts.push(primaryText);
     for (const sec of secondaryEvents) {
-      const secMsg = sec.payload?.message || {};
-      const secText = secMsg.text?.body || secMsg.interactive?.button_reply?.title || '';
+      const secText = (sec.payload as { text?: string } | null)?.text ?? '';
       if (secText) texts.push(secText);
     }
     const concatenatedText = texts.join('\n');
     const promptText = concatenatedText.trim()
       ? concatenatedText
-      : primaryMsg.type
-      ? `[Mensaje recibido de tipo ${primaryMsg.type}]`
+      : primaryPayload?.type
+      ? `[Mensaje recibido de tipo ${primaryPayload.type}]`
       : 'Hola';
 
     let contact: ContactRecord | undefined;
@@ -378,10 +380,9 @@ export class InboundDispatcher {
 
           // C9: Guardar cada mensaje individualmente en messages
           for (const ev of allEvents) {
-            const m = ev.payload?.message || {};
-            const t = m.text?.body || m.interactive?.button_reply?.title || '';
+            const p = ev.payload as { text?: string; raw?: unknown } | null;
             await messageRepository.saveInboundMessage(
-              { wamid: ev.wamid, conversationId: conversation.id, content: t, rawPayload: m },
+              { wamid: ev.wamid, conversationId: conversation.id, content: p?.text ?? '', rawPayload: (p?.raw ?? p ?? undefined) as Record<string, unknown> | undefined },
               client
             );
           }
@@ -575,14 +576,13 @@ export class InboundDispatcher {
 
         // D. C9: Persistencia individual inmutable en public.messages para cada mensaje del lote
         for (const ev of allEvents) {
-          const m = ev.payload?.message || {};
-          const t = m.text?.body || m.interactive?.button_reply?.title || '';
+          const p = ev.payload as { text?: string; raw?: unknown } | null;
           await messageRepository.saveInboundMessage(
             {
               wamid: ev.wamid,
               conversationId: conversation.id,
-              content: t,
-              rawPayload: m,
+              content: p?.text ?? '',
+              rawPayload: (p?.raw ?? p ?? undefined) as Record<string, unknown> | undefined,
             },
             client
           );
@@ -691,14 +691,13 @@ export class InboundDispatcher {
       );
 
       for (const ev of allEvents) {
-        const m = ev.payload?.message || {};
-        const t = m.text?.body || m.interactive?.button_reply?.title || '';
+        const p = ev.payload as { text?: string; raw?: unknown } | null;
         await messageRepository.saveInboundMessage(
           {
             wamid: ev.wamid,
             conversationId: conversation.id,
-            content: t,
-            rawPayload: m,
+            content: p?.text ?? '',
+            rawPayload: (p?.raw ?? p ?? undefined) as Record<string, unknown> | undefined,
           },
           client
         );

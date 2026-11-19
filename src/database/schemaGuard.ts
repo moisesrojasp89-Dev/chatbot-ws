@@ -14,6 +14,7 @@ export class SchemaValidationError extends Error {
 const REQUIRED_MIGRATIONS = [
   '014_multichannel_channel_columns.sql',
   '015_inbound_channel_identity.sql',
+  '016_backfill_normalized_inbound_payload.sql',
 ];
 
 /**
@@ -103,5 +104,5 @@ export async function assertSchemaReady(): Promise<void> {
     throw new SchemaValidationError(issues);
   }
 
-  logger.info('🧱 Esquema validado: migraciones 014/015, columnas channel y unicidad por canal');
+  logger.info('🧱 Esquema validado: migraciones 014-016, columnas channel y unicidad por canal');
 }

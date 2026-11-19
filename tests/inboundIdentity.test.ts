@@ -3,10 +3,7 @@ import { db } from '../src/providers/database/dbClient.js';
 import { inboundRepository } from '../src/repositories/inboundRepository.js';
 
 function payload(text: string) {
-  return {
-    message: { type: 'text', text: { body: text }, id: 'x', from: 'same' },
-    metadata: { phone_number_id: 'p' },
-  };
+  return { type: 'text', text, senderName: 'Test' };
 }
 
 beforeEach(async () => {

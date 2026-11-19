@@ -48,7 +48,7 @@ Copia `.env.example` a `.env` y completa:
 ```bash
 npm ci
 cp .env.example .env      # completar variables
-npm run migrate           # aplica 001 → 015
+npm run migrate           # aplica 001 → 016
 npm run build
 npm test
 npm run quality-gate
@@ -68,13 +68,14 @@ curl -s http://localhost:3000/ready
 
 ### Estado actual
 
-- Migraciones: **001 → 015**.
+- Migraciones: **001 → 016**.
 - La **015** cambia `UNIQUE(wamid)` por `UNIQUE(channel, wamid)` en `inbound_events`.
+- La **016** backfillea payloads inbound legados al sobre normalizado. Requiere la misma ventana que la 015: `stop → migrate → start`.
 
 ### Verificar en SQL
 
 ```sql
-SELECT count(*) FROM public.migrations_history;  -- debe dar 15
+SELECT count(*) FROM public.migrations_history;  -- debe dar 16
 SELECT conname FROM pg_constraint
 WHERE conrelid = 'public.inbound_events'::regclass
   AND contype = 'u';
@@ -90,7 +91,7 @@ npm run build
 sudo systemctl start chatbot-ws
 ```
 
-**No hagas rolling deploy de la 015:** el código viejo usa `ON CONFLICT (wamid)` y, tras eliminar esa constraint, fallaría con `42P10`. El código nuevo también falla con `42P10` si arranca **antes** de aplicar la 015.
+**No hagas rolling deploy de la 015 ni de la 016:** el código viejo usa `ON CONFLICT (wamid)` y, tras eliminar esa constraint, fallaría con `42P10`. El código nuevo falla con `42P10` si arranca **antes** de la 015, y leería sin texto las filas legadas si arranca antes de la 016. Aplica ambas con el servicio detenido.
 
 > En systemd, configura Restart=on-failure y revisa journalctl -u chatbot-ws. Si el guard de esquema falla, el proceso aborta con exit 1 y no acepta webhooks.
 
@@ -124,8 +125,8 @@ El adaptador valida `X-Telegram-Bot-Api-Secret-Token` y responde `200` tras pers
 
 - [ ] `GET /health` → `200` con `database: connected`.
 - [ ] `GET /ready` → `200` con `status: ready`.
-- [ ] `SELECT count(*) FROM migrations_history` → `15`.
-- [ ] El arranque validó el esquema (migraciones 014/015, columna `channel` y unicidad por canal).
+- [ ] `SELECT count(*) FROM migrations_history` → `16`.
+- [ ] El arranque validó el esquema (migraciones 014-016, columna `channel` y unicidad por canal).
 - [ ] Webhook de Meta verificado (`GET /webhook` challenge).
 - [ ] Webhook de Telegram registrado (`getWebhookInfo`).
 - [ ] Un mensaje de prueba entra, se persiste y responde por el mismo canal.
@@ -160,6 +161,8 @@ ALTER TABLE public.inbound_events ADD CONSTRAINT inbound_events_wamid_key UNIQUE
 ```
 
 4. `npm run build` y arrancar.
+
+La 016 es reversible con `UPDATE inbound_events SET payload = payload -> 'raw' WHERE payload ? 'raw' AND NOT (payload ? 'message');` (conserva el mensaje original, no contact/metadata).
 
 ---
 

@@ -199,7 +199,7 @@ export class InboundRepository {
         primary.id,
       ]);
 
-      const primaryMsgType = primary.payload?.message?.type;
+      const primaryMsgType = (primary.payload as { type?: string } | null)?.type;
       const contiguousIds: string[] = [];
       const maxSecondaries = (CONSTANTS.INBOUND.COALESCE_MAX_MESSAGES ?? 5) - 1;
 
@@ -207,7 +207,7 @@ export class InboundRepository {
       if (primaryMsgType === 'text' && maxSecondaries > 0) {
         for (const row of secondariesRes.rows) {
           if (contiguousIds.length >= maxSecondaries) break;
-          const msgType = row.payload?.message?.type;
+          const msgType = (row.payload as { type?: string } | null)?.type;
           if (msgType === 'text') {
             contiguousIds.push(row.id);
           } else {

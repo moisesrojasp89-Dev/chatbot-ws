@@ -1,10 +1,9 @@
 import { FastifyRequest, FastifyReply } from 'fastify';
 import crypto from 'node:crypto';
 import { getMetaConfig } from '../providers/channels/meta/metaConfig.js';
-import { validateMetaSignature } from '../utils/crypto.js';
+import { metaChannelSender } from '../providers/channels/meta/metaChannelSender.js';
 import { logger } from '../utils/logger.js';
 import { phoneRateLimiter } from '../middleware/rateLimiter.js';
-import { MetaWebhookPayload } from '../types/meta.js';
 import { messageRepository } from '../repositories/messageRepository.js';
 import { inboundRepository } from '../repositories/inboundRepository.js';
 import { auditRepository } from '../repositories/auditRepository.js';
@@ -46,134 +45,128 @@ export async function handleVerifyWebhook(
 
 /**
  * POST /webhook
- * Endpoint de ingesta de eventos de Meta WhatsApp Cloud API.
- * SLA: Responde HTTP 200 OK de inmediato (< 500ms).
- * Auditor 5B (I18):
- * - Persistencia síncrona en inbound_events antes de emitir el ACK 200.
- * - Si la base de datos falla, retorna 500 para forzar reintento de Meta.
- * - Idempotencia absoluta por UNIQUE(wamid) en base de datos (ON CONFLICT DO NOTHING).
- * - Cero llamadas a LLM ni a AgentEngine en la ruta de ACK.
+ * Controller fino de Meta: el adaptador valida la firma y traduce el payload
+ * al sobre normalizado. El controller aplica rate limit/auditoría y persiste
+ * durablemente antes del ACK 200.
  */
 export async function handleIncomingWebhook(
-  request: FastifyRequest<{
-    Body: MetaWebhookPayload;
-  }>,
+  request: FastifyRequest<{ Body: unknown }>,
   reply: FastifyReply
 ): Promise<void> {
   const signature = request.headers['x-hub-signature-256'] as string | undefined;
   const rawBody = (request as unknown as { rawBody?: string | Buffer }).rawBody;
 
-  // 1. Validación Criptográfica HMAC SHA-256
-  const isValidSignature = validateMetaSignature(rawBody, signature);
-  if (!isValidSignature) {
+  // 1. Validación criptográfica HMAC SHA-256 delegada al adaptador Meta
+  if (!metaChannelSender.verifyInbound({ rawBody, signature })) {
     logger.warn({ ip: request.ip }, '🚨 Petición de webhook rechazada: Firma HMAC SHA-256 inválida o ausente');
     reply.status(401).send({ error: 'Unauthorized. Invalid HMAC signature.' });
     return;
   }
 
-  const payload = request.body;
-  if (payload?.object !== 'whatsapp_business_account' || !payload.entry) {
+  let parsed: ReturnType<typeof metaChannelSender.parseInbound>;
+  try {
+    parsed = metaChannelSender.parseInbound(request.body);
+  } catch (error) {
+    // Un payload autenticado pero malformado no debe provocar reintentos infinitos.
+    logger.warn({ error }, 'Webhook Meta malformado: se ignora con ACK 200');
+    reply.status(200).send({ status: 'ignored' });
+    return;
+  }
+
+  const { messages, statuses } = parsed;
+  if (messages.length === 0 && statuses.length === 0) {
     reply.status(200).send({ status: 'ok' });
     return;
   }
 
   try {
-    // 2. Auditor 5B (I18): Persistencia síncrona en inbound_events antes de emitir el ACK 200
-    for (const entry of payload.entry) {
-      if (!entry.changes) continue;
-      for (const change of entry.changes) {
-        const value = change.value;
-        if (!value || value.messaging_product !== 'whatsapp') continue;
-
-        // A. Status Updates de Meta
-        if (value.statuses && Array.isArray(value.statuses)) {
-          for (const statusObj of value.statuses) {
-            const wamid = statusObj.id;
-            const status = statusObj.status;
-            const parsedSeconds = statusObj.timestamp ? Number.parseInt(statusObj.timestamp, 10) : Number.NaN;
-            const timestamp = Number.isFinite(parsedSeconds)
-              ? new Date(parsedSeconds * 1000)
-              : new Date(0); // Epoch determinista de respaldo para no romper la idempotencia de UNIQUE(wamid, status, event_timestamp)
-            const errorObj =
-              statusObj.errors && Array.isArray(statusObj.errors) && statusObj.errors.length > 0
-                ? statusObj.errors[0]
-                : undefined;
-            const errorDetails = errorObj
-              ? { code: errorObj.code, message: errorObj.title || (errorObj as { message?: string }).message }
-              : undefined;
-
-            await messageRepository.updateDeliveryStatus(wamid, status, timestamp, errorDetails);
+    // A. Status Updates normalizados por el adaptador
+    for (const statusEvent of statuses) {
+      const timestamp = new Date(statusEvent.occurredAt);
+      const firstError = Array.isArray(statusEvent.errors) ? statusEvent.errors[0] : undefined;
+      const errorDetails = firstError
+        ? {
+            code: (firstError as { code?: number }).code,
+            message:
+              (firstError as { title?: string; message?: string }).title ||
+              (firstError as { message?: string }).message,
           }
+        : undefined;
+
+      await messageRepository.updateDeliveryStatus(
+        statusEvent.externalMessageId,
+        statusEvent.status,
+        Number.isNaN(timestamp.getTime()) ? new Date(0) : timestamp,
+        errorDetails
+      );
+    }
+
+    // B. Mensajes entrantes normalizados
+    for (const message of messages) {
+      const phoneNumberId = typeof message.externalAccountId === 'string' ? message.externalAccountId.trim() : '';
+
+      // C5: metadata inválida → auditar y descartar sin fallback global.
+      if (!phoneNumberId || phoneNumberId === 'UNKNOWN') {
+        const auditMetadata = (message.raw as { metadata?: unknown })?.metadata ?? {
+          channel: message.channel,
+          externalAccountId: message.externalAccountId,
+          externalMessageId: message.externalMessageId,
+        };
+        logger.warn(
+          { alert: 'MALFORMED_WEBHOOK_PAYLOAD', metadata: auditMetadata },
+          '⚠️ Webhook sin phone_number_id válido en metadata: descartando mensaje para evitar contaminación multi-tenant'
+        );
+        try {
+          await auditRepository.logEvent(null, 'MALFORMED_WEBHOOK_PAYLOAD', 'SYSTEM', {
+            metadata: auditMetadata,
+            messagesCount: 1,
+          });
+        } catch (auditErr) {
+          logger.error({ auditErr }, 'Error registrando auditoría de webhook malformado');
         }
+        continue;
+      }
 
-        // B. Mensajes entrantes de clientes
-        if (value.messages && Array.isArray(value.messages)) {
-          const rawPhoneNumberId = value.metadata?.phone_number_id;
-          if (
-            !rawPhoneNumberId ||
-            typeof rawPhoneNumberId !== 'string' ||
-            rawPhoneNumberId.trim() === '' ||
-            rawPhoneNumberId === 'UNKNOWN'
-          ) {
-            // C5: Log MALFORMED_WEBHOOK_PAYLOAD, registrar auditoría y descartar sin procesar ni usar fallback global
-            logger.warn(
-              { alert: 'MALFORMED_WEBHOOK_PAYLOAD', metadata: value.metadata },
-              '⚠️ Webhook recibido sin phone_number_id válido en metadata: descartando mensaje para evitar contaminación multi-tenant'
-            );
-            try {
-              await auditRepository.logEvent(null, 'MALFORMED_WEBHOOK_PAYLOAD', 'SYSTEM', {
-                metadata: value.metadata,
-                messagesCount: value.messages.length,
-              });
-            } catch (auditErr) {
-              logger.error({ auditErr }, 'Error registrando auditoría de webhook malformado');
-            }
-            continue;
-          }
-
-          const phoneNumberId = rawPhoneNumberId.trim();
-          for (const msg of value.messages) {
-            const from = msg.from;
-            const wamid = msg.id;
-
-            if (phoneRateLimiter.isRateLimited(from)) {
-              logger.warn({ phoneNumber: from, wamid }, 'Usuario superó el límite de tasa (Rate Limited)');
-              try {
-                await auditRepository.logEvent(null, 'RATE_LIMIT_EXCEEDED', 'SYSTEM', {
-                  phoneNumber: from,
-                  wamid,
-                });
-              } catch (auditErr) {
-                logger.error({ auditErr }, 'Error registrando auditoría de rate limit');
-              }
-              continue;
-            }
-
-            // Auditor 5B (I18 & Punto 4): Única compuerta duradera en inbound_events (ON CONFLICT DO NOTHING)
-            const persisted = await inboundRepository.persistInboundEvent({
-              wamid,
-              phoneNumberId,
-              senderPhone: from,
-              payload: {
-                message: msg,
-                contact: value.contacts?.[0],
-                metadata: value.metadata,
-              },
-              channel: 'whatsapp',
-            });
-
-            if (persisted) {
-              logger.info({ wamid, senderPhone: from }, '📥 Evento inbound persistido duraderamente en PostgreSQL');
-            } else {
-              logger.info({ wamid, senderPhone: from }, 'Evento inbound duplicado interceptado (ON CONFLICT DO NOTHING)');
-            }
-          }
+      const from = message.senderId;
+      if (phoneRateLimiter.isRateLimited(from)) {
+        logger.warn(
+          { phoneNumber: from, wamid: message.externalMessageId },
+          'Usuario superó el límite de tasa (Rate Limited)'
+        );
+        try {
+          await auditRepository.logEvent(null, 'RATE_LIMIT_EXCEEDED', 'SYSTEM', {
+            phoneNumber: from,
+            wamid: message.externalMessageId,
+          });
+        } catch (auditErr) {
+          logger.error({ auditErr }, 'Error registrando auditoría de rate limit');
         }
+        continue;
+      }
+
+      // Auditor 5B (I18 & Punto 4): Única compuerta duradera en inbound_events (ON CONFLICT DO NOTHING)
+      const persisted = await inboundRepository.persistInboundEvent({
+        wamid: message.externalMessageId,
+        phoneNumberId,
+        senderPhone: from,
+        payload: message,
+        channel: message.channel,
+      });
+
+      if (persisted) {
+        logger.info(
+          { wamid: message.externalMessageId, senderPhone: from },
+          '📥 Evento inbound persistido duraderamente en PostgreSQL'
+        );
+      } else {
+        logger.info(
+          { wamid: message.externalMessageId, senderPhone: from },
+          'Evento inbound duplicado interceptado (ON CONFLICT DO NOTHING)'
+        );
       }
     }
 
     // 3. Acuse de recibo exitoso a Meta tras persistir en DB (< 500ms)
-    // CRÍTICO: El camino del ACK NO llama al LLM ni a AgentEngine
     reply.status(200).send({ status: 'ok' });
   } catch (error) {
     logger.error({ error }, '🚨 Error al persistir evento inbound en base de datos. Respondiendo 500 para reintento de Meta');

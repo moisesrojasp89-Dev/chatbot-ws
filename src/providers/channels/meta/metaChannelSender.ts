@@ -1,11 +1,32 @@
 import {
+  ChannelAdapter,
   ChannelSendError,
   ChannelSendRequest,
   ChannelSendResult,
-  ChannelSender,
+  NormalizedInboundMessage,
+  NormalizedStatusEvent,
+  ParsedInbound,
 } from '../channelTypes.js';
+import { validateMetaSignature } from '../../../utils/crypto.js';
+import { MetaStatus, MetaWebhookPayload } from '../../../types/meta.js';
 import { getMetaConfig, MetaConfigError } from './metaConfig.js';
 import { MetaGraphApiError, whatsappClient } from './whatsappClient.js';
+
+function isoFromUnixSeconds(timestamp?: string, fallback: Date = new Date()): string {
+  const seconds = timestamp ? Number(timestamp) : Number.NaN;
+  const valid = Number.isFinite(seconds) && Math.abs(seconds) <= 8.64e12;
+  return valid ? new Date(seconds * 1000).toISOString() : fallback.toISOString();
+}
+
+function normalizeStatus(status: MetaStatus): NormalizedStatusEvent {
+  return {
+    channel: 'whatsapp',
+    externalMessageId: status.id,
+    status: status.status,
+    occurredAt: isoFromUnixSeconds(status.timestamp, new Date(0)),
+    errors: status.errors,
+  };
+}
 
 /**
  * Traduce los errores propietarios de Meta a la taxonomía común de canales.
@@ -35,8 +56,73 @@ function mapMetaError(error: unknown): ChannelSendError {
   return new ChannelSendError('TRANSIENT', message, { cause: error });
 }
 
-export class MetaChannelSender implements ChannelSender {
+export class MetaChannelSender implements ChannelAdapter {
   public readonly channel = 'whatsapp';
+
+  public verifyInbound(request: unknown): boolean {
+    const { rawBody, signature } = (request ?? {}) as {
+      rawBody?: string | Buffer;
+      signature?: string;
+    };
+    return validateMetaSignature(rawBody, signature);
+  }
+
+  public parseInbound(payload: unknown): ParsedInbound {
+    const meta = payload as MetaWebhookPayload;
+    const messages: NormalizedInboundMessage[] = [];
+    const statuses: NormalizedStatusEvent[] = [];
+
+    if (!meta || meta.object !== 'whatsapp_business_account' || !Array.isArray(meta.entry)) {
+      return { messages, statuses };
+    }
+
+    for (const entry of meta.entry) {
+      if (!entry || !Array.isArray(entry.changes)) continue;
+
+      for (const change of entry.changes) {
+        const value = change?.value;
+        // Solo el producto WhatsApp; un payload autenticado pero raro se ignora sin lanzar.
+        if (!value || value.messaging_product !== 'whatsapp') continue;
+
+        // No usar fallback de canal: un metadata inválido debe descartarse en el controller.
+        const accountId =
+          typeof value.metadata?.phone_number_id === 'string' ? value.metadata.phone_number_id : '';
+
+        const statusList = Array.isArray(value.statuses) ? value.statuses : [];
+        for (const status of statusList) {
+          if (!status || typeof status.id !== 'string' || !status.status) continue;
+          statuses.push(normalizeStatus(status));
+        }
+
+        const messageList = Array.isArray(value.messages) ? value.messages : [];
+        for (const message of messageList) {
+          if (!message || typeof message.id !== 'string' || typeof message.from !== 'string') continue;
+
+          const text =
+            message.text?.body ??
+            message.interactive?.button_reply?.title ??
+            message.interactive?.list_reply?.title ??
+            '';
+          const senderName = value.contacts?.[0]?.profile?.name?.trim() || 'Cliente';
+
+          messages.push({
+            channel: this.channel,
+            externalMessageId: message.id,
+            externalAccountId: accountId,
+            senderId: message.from,
+            senderName,
+            occurredAt: isoFromUnixSeconds(message.timestamp),
+            type: message.type ?? 'text',
+            text,
+            // Solo el mensaje original: el sobre completo ya vive en inbound_events.
+            raw: message,
+          });
+        }
+      }
+    }
+
+    return { messages, statuses };
+  }
 
   public async sendText(request: ChannelSendRequest): Promise<ChannelSendResult> {
     try {

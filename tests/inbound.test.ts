@@ -218,14 +218,14 @@ describe('Fase 5B: Inbound Durable (I18) & Pipeline de Concurrencia', { timeout:
         wamid: `wamid.SEQ_A_${Date.now()}`,
         phoneNumberId: phoneId,
         senderPhone,
-        payload: { message: { text: { body: 'A' } } },
+        payload: { type: 'text', text: 'A' },
       }))!;
       await new Promise((r) => setTimeout(r, 20));
       const evB = (await inboundRepository.persistInboundEvent({
         wamid: `wamid.SEQ_B_${Date.now()}`,
         phoneNumberId: phoneId,
         senderPhone,
-        payload: { message: { text: { body: 'B' } } },
+        payload: { type: 'text', text: 'B' },
       }))!;
 
       // 1. Claim devuelve solo A
@@ -250,7 +250,7 @@ describe('Fase 5B: Inbound Durable (I18) & Pipeline de Concurrencia', { timeout:
         wamid: `wamid.SEQ_OTHER_PHONEID_${Date.now()}`,
         phoneNumberId: 'PHONE_OTHER_CHANNEL',
         senderPhone,
-        payload: { message: { text: { body: 'Mensaje de canal alternativo' } } },
+        payload: { type: 'text', text: 'Mensaje de canal alternativo' },
       }))!;
       const claimOther = await inboundRepository.claimPendingBatch(10);
       expect(claimOther.map((e) => e.id)).toContain(evOtherChannel.id);
@@ -279,14 +279,14 @@ describe('Fase 5B: Inbound Durable (I18) & Pipeline de Concurrencia', { timeout:
         wamid: `wamid.SEQ_C_${Date.now()}`,
         phoneNumberId: phoneId,
         senderPhone: senderPhoneCD,
-        payload: { message: { text: { body: 'C' } } },
+        payload: { type: 'text', text: 'C' },
       }))!;
       await new Promise((r) => setTimeout(r, 20));
       const evD = (await inboundRepository.persistInboundEvent({
         wamid: `wamid.SEQ_D_${Date.now()}`,
         phoneNumberId: phoneId,
         senderPhone: senderPhoneCD,
-        payload: { message: { text: { body: 'D' } } },
+        payload: { type: 'text', text: 'D' },
       }))!;
 
       const claimC = await inboundRepository.claimPendingBatch(10);
@@ -310,7 +310,7 @@ describe('Fase 5B: Inbound Durable (I18) & Pipeline de Concurrencia', { timeout:
         wamid: `wamid.FENCE_TEST_${Date.now()}`,
         phoneNumberId: 'PHONE_FENCE',
         senderPhone,
-        payload: { message: { text: { body: 'Mensaje con lease robado en vuelo' } } },
+        payload: { type: 'text', text: 'Mensaje con lease robado en vuelo' },
       }))!;
 
       const claimed = await inboundRepository.claimPendingBatch(10);
@@ -373,7 +373,7 @@ describe('Fase 5B: Inbound Durable (I18) & Pipeline de Concurrencia', { timeout:
         wamid: `wamid.LEAD_ROLLBACK_${Date.now()}`,
         phoneNumberId: 'PHONE_LEAD',
         senderPhone,
-        payload: { message: { text: { body: 'Quiero comprar el plan Pro' } } },
+        payload: { type: 'text', text: 'Quiero comprar el plan Pro' },
       }))!;
 
       const claimed = await inboundRepository.claimPendingBatch(10);
@@ -465,7 +465,7 @@ describe('Fase 5B: Inbound Durable (I18) & Pipeline de Concurrencia', { timeout:
         wamid: `wamid.SHUTDOWN_INFLIGHT_${Date.now()}`,
         phoneNumberId: 'PHONE_SHUTDOWN',
         senderPhone,
-        payload: { message: { text: { body: 'Mensaje largo en vuelo' } } },
+        payload: { type: 'text', text: 'Mensaje largo en vuelo' },
       }))!;
 
       const claimed = await inboundRepository.claimPendingBatch(10);
@@ -511,7 +511,7 @@ describe('Fase 5B: Inbound Durable (I18) & Pipeline de Concurrencia', { timeout:
         wamid: `wamid.ABORT_NO_SHUTDOWN_${Date.now()}`,
         phoneNumberId: 'PHONE_ABORT_TEST',
         senderPhone,
-        payload: { message: { text: { body: 'Mensaje con timeout interno de SDK' } } },
+        payload: { type: 'text', text: 'Mensaje con timeout interno de SDK' },
       }))!;
 
       const claimed = await inboundRepository.claimPendingBatch(10);
@@ -541,7 +541,7 @@ describe('Fase 5B: Inbound Durable (I18) & Pipeline de Concurrencia', { timeout:
         wamid: `wamid.REAPER_SHUTDOWN_${Date.now()}`,
         phoneNumberId: 'PHONE_REAPER',
         senderPhone,
-        payload: { message: { text: { body: 'Evento interrumpido por SIGKILL' } } },
+        payload: { type: 'text', text: 'Evento interrumpido por SIGKILL' },
       }))!;
 
       // Simular que el worker estaba procesando y murió abruptamente (lease expirado)
@@ -580,7 +580,7 @@ describe('Fase 5B: Inbound Durable (I18) & Pipeline de Concurrencia', { timeout:
         wamid: `wamid.LLM_FAIL_${Date.now()}`,
         phoneNumberId: 'PHONE_FALLBACK',
         senderPhone,
-        payload: { message: { text: { body: 'Mensaje que provocará fallo terminal' } } },
+        payload: { type: 'text', text: 'Mensaje que provocará fallo terminal' },
       }))!;
 
       // Simular que ya está en su último reintento (retry_count = 2)
@@ -614,7 +614,7 @@ describe('Fase 5B: Inbound Durable (I18) & Pipeline de Concurrencia', { timeout:
         wamid: `wamid.EMPTY_LLM_${Date.now()}`,
         phoneNumberId: 'PHONE_EMPTY',
         senderPhone,
-        payload: { message: { text: { body: 'Pregunta del usuario' } } },
+        payload: { type: 'text', text: 'Pregunta del usuario' },
       }))!;
 
       const claimed = await inboundRepository.claimPendingBatch(10);
@@ -650,7 +650,7 @@ describe('Fase 5B: Inbound Durable (I18) & Pipeline de Concurrencia', { timeout:
         wamid: `wamid.HANDOFF_EMPTY_${Date.now()}`,
         phoneNumberId: 'PHONE_HANDOFF_EMPTY',
         senderPhone,
-        payload: { message: { text: { body: 'Necesito hablar con un humano por favor' } } },
+        payload: { type: 'text', text: 'Necesito hablar con un humano por favor' },
       }))!;
 
       const claimed = await inboundRepository.claimPendingBatch(10);
@@ -697,13 +697,13 @@ describe('Fase 5B: Inbound Durable (I18) & Pipeline de Concurrencia', { timeout:
         wamid: `wamid.STALE_1_${Date.now()}`,
         phoneNumberId: 'PHONE_STALE',
         senderPhone: stalePhone,
-        payload: { message: { text: { body: 'Consulta vieja 1' } } },
+        payload: { type: 'text', text: 'Consulta vieja 1' },
       }))!;
       const ev2 = (await inboundRepository.persistInboundEvent({
         wamid: `wamid.STALE_2_${Date.now()}`,
         phoneNumberId: 'PHONE_STALE',
         senderPhone: stalePhone,
-        payload: { message: { text: { body: 'Consulta vieja 2' } } },
+        payload: { type: 'text', text: 'Consulta vieja 2' },
       }))!;
 
       // Forzar created_at y next_retry_at a hace 46 min para ev1 y 45 min para ev2 (orden determinista)

@@ -1,8 +1,11 @@
+import crypto from 'node:crypto';
+import { z } from 'zod';
 import {
+  ChannelAdapter,
   ChannelSendError,
   ChannelSendRequest,
   ChannelSendResult,
-  ChannelSender,
+  ParsedInbound,
 } from '../channelTypes.js';
 import { getTelegramConfig, TelegramConfigError } from './telegramConfig.js';
 
@@ -12,6 +15,35 @@ interface TelegramApiResponse {
   description?: string;
   error_code?: number;
   parameters?: { retry_after?: number };
+}
+
+const telegramUpdateSchema = z
+  .object({
+    update_id: z.number().int(),
+    message: z
+      .object({
+        message_id: z.number().optional(),
+        date: z.number().optional(),
+        text: z.string().optional(),
+        chat: z.object({ id: z.union([z.number(), z.string()]) }).optional(),
+        from: z
+          .object({
+            first_name: z.string().optional(),
+            last_name: z.string().optional(),
+            username: z.string().optional(),
+          })
+          .passthrough()
+          .optional(),
+      })
+      .passthrough()
+      .optional(),
+  })
+  .passthrough();
+
+function timingSafeStringEqual(left: string, right: string): boolean {
+  const leftHash = crypto.createHash('sha256').update(left).digest();
+  const rightHash = crypto.createHash('sha256').update(right).digest();
+  return crypto.timingSafeEqual(leftHash, rightHash);
 }
 
 function mapTelegramError(
@@ -35,8 +67,64 @@ function mapTelegramError(
   return new ChannelSendError('FATAL', message, { status, retryAfterSeconds: retryAfter });
 }
 
-export class TelegramChannelSender implements ChannelSender {
+export class TelegramChannelSender implements ChannelAdapter {
   public readonly channel = 'telegram';
+
+  public verifyInbound(request: unknown): boolean {
+    const { webhookSecret } = getTelegramConfig();
+    const headers = (request as { headers?: Record<string, string | string[] | undefined> })?.headers;
+    const header = headers?.['x-telegram-bot-api-secret-token'];
+    const provided = Array.isArray(header) ? header[0] : header;
+
+    return typeof provided === 'string' && timingSafeStringEqual(provided, webhookSecret);
+  }
+
+  public parseInbound(payload: unknown): ParsedInbound {
+    const parsed = telegramUpdateSchema.safeParse(payload);
+    if (!parsed.success) {
+      return { messages: [], statuses: [] };
+    }
+
+    const update = parsed.data;
+    const message = update.message;
+    const chatId = message?.chat?.id;
+    const text = message?.text;
+
+    if (chatId === undefined || typeof text !== 'string') {
+      return { messages: [], statuses: [] };
+    }
+
+    const senderName =
+      [message?.from?.first_name, message?.from?.last_name].filter(Boolean).join(' ').trim() ||
+      message?.from?.username ||
+      'desconocido';
+
+    const dateSeconds = message?.date;
+    const dateValid =
+      typeof dateSeconds === 'number' &&
+      Number.isFinite(dateSeconds) &&
+      Math.abs(dateSeconds) <= 8.64e12;
+
+    return {
+      messages: [
+        {
+          channel: this.channel,
+          externalMessageId: `tg:in:${update.update_id}`,
+          externalAccountId: 'telegram',
+          senderId: String(chatId),
+          senderName,
+          occurredAt: dateValid
+            ? new Date(dateSeconds * 1000).toISOString()
+            : new Date().toISOString(),
+          type: 'text',
+          text,
+          // Solo el mensaje original: el update completo ya no se duplica en messages.raw_payload.
+          raw: message,
+        },
+      ],
+      statuses: [],
+    };
+  }
 
   public async sendText(request: ChannelSendRequest): Promise<ChannelSendResult> {
     try {

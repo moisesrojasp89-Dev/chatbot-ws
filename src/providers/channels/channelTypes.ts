@@ -75,17 +75,31 @@ export interface NormalizedInboundMessage {
   externalMessageId: string;
   externalAccountId: string;
   senderId: string;
-  occurredAt: Date;
+  senderName: string;
+  occurredAt: string;
   type: string;
   text?: string;
   raw?: unknown;
 }
 
+export interface NormalizedStatusEvent {
+  channel: string;
+  externalMessageId: string;
+  status: 'sent' | 'delivered' | 'read' | 'failed';
+  occurredAt: string;
+  errors?: unknown;
+}
+
+export interface ParsedInbound {
+  messages: NormalizedInboundMessage[];
+  statuses: NormalizedStatusEvent[];
+}
+
 /**
- * Contrato para canales entrantes (webhooks). Se implementará por adaptador
- * cuando se habilite el segundo canal; el núcleo nunca parsea payloads de proveedor.
+ * Contrato para canales entrantes (webhooks). El núcleo solo consume el sobre
+ * normalizado; cada adaptador verifica y traduce su payload propietario.
  */
 export interface ChannelAdapter extends ChannelSender {
   verifyInbound(request: unknown): boolean | Promise<boolean>;
-  parseInbound(payload: unknown): NormalizedInboundMessage[];
+  parseInbound(payload: unknown): ParsedInbound;
 }
