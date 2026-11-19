@@ -1,13 +1,34 @@
-# 🤖 Chatbot WS — Enterprise Immediate-Response WhatsApp Assistant
+# 🤖 Chatbot WS — Plataforma Omnicanal de Atención y Ventas con IA
 
 [![TypeScript](https://img.shields.io/badge/TypeScript-5.6-blue.svg)](https://www.typescriptlang.org/)
 [![Fastify](https://img.shields.io/badge/Fastify-4.28-black.svg)](https://fastify.dev/)
 [![LLM](https://img.shields.io/badge/LLM-Provider_Agnostic-blueviolet.svg)](#-arquitectura-dual-daemon--harness-con-rigor-de-ingeniería)
 [![PostgreSQL](https://img.shields.io/badge/PostgreSQL-16-blue.svg)](https://www.postgresql.org/)
-[![Tests](https://img.shields.io/badge/Tests-132%2F132_Passing-success.svg)](./tests)
+[![Multichannel](https://img.shields.io/badge/Channels-Multichannel-25D366.svg)](#-canales-y-verticales)
+[![Tests](https://img.shields.io/badge/Tests-134%2F134_Passing-success.svg)](./tests)
 [![Quality Gate](https://img.shields.io/badge/Quality_Gate-Certified_100%25-success.svg)](#-quality-gate-y-certificación-institucional)
 
-Plataforma de alta velocidad y gobernanza agéntica para atención al cliente y ventas inmediatas en **WhatsApp Business Cloud API**, diseñada para el mercado corporativo de América Latina y Brasil.
+Plataforma **omnicanal** de atención, ventas y automatización con IA para empresas de LATAM. Un solo núcleo conversacional —memoria, FSM, guardrails y herramientas de negocio— está diseñado para operar sobre **WhatsApp, Instagram, Telegram, TikTok o canales propios**, con motor LLM intercambiable y sin lock-in de proveedor.
+
+> **Canal productivo hoy:** WhatsApp Business Cloud API. El diseño separa ingesta, inferencia y despacho, de modo que nuevos canales se incorporan como adaptadores sobre el mismo motor conversacional; Telegram, Instagram DM, TikTok y webchat están en roadmap.
+
+### 🎯 Valor diferencial
+
+- **Omnicanal por diseño, no un bot de un solo canal:** WhatsApp es una integración, no el producto. Reduce la dependencia de un único canal y de sus cambios de tarifas.
+- **Sin lock-in de LLM:** `LLM_BASE_URL` + `LLM_MODEL` permiten alternar OpenAI, Groq, OpenRouter, DeepSeek, modelos locales y cualquier API compatible.
+- **Economía operativa:** micro-mensajes (180 tokens), coalescencia de ráfagas, rate limiter dual RPM/TPM y contexto comprimido.
+- **Multi-vertical:** automotriz y dealers, retail, salud, educación, inmobiliaria, servicios profesionales y atención B2B/B2C.
+- **Confianza operativa:** idempotencia por `wamid`, outbox transaccional, circuit breakers, RLS multi-tenant y guardrails deterministas.
+
+### 📡 Canales y verticales
+
+| Canal | Estado | Integración |
+| :--- | :---: | :--- |
+| WhatsApp Business Cloud API | ✅ Operativo | Webhook HMAC + Graph API + outbox transaccional |
+| Instagram DM | 🧭 Roadmap | Meta Graph API (requiere permisos de la app) |
+| Telegram | 🧭 Roadmap | Bot API |
+| TikTok | 🧭 Roadmap | API de mensajería (según disponibilidad regional) |
+| Webchat / API propia | 🧭 Roadmap | Adaptador HTTP sobre el mismo pipeline |
 
 ---
 
@@ -15,7 +36,7 @@ Plataforma de alta velocidad y gobernanza agéntica para atención al cliente y 
 
 El núcleo del sistema desacopla la red externa y la inferencia de lenguaje mediante un patrón **Dual Daemon** respaldado por persistencia durable en PostgreSQL:
 
-$$\text{Chatbot Empresarial} = \text{Pipeline Inbound Durable} + \text{Motor LLM / Harness} + \text{Transactional Outbox}$$
+$$\text{Plataforma Omnicanal} = \text{Capa de Canales} + \text{Pipeline Inbound Durable} + \text{Motor LLM / Harness} + \text{Transactional Outbox}$$
 
 ### Pilares de Arquitectura y Resiliencia:
 1. **Pipeline de Inbound Durable (I18):**

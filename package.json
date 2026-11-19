@@ -1,7 +1,7 @@
 {
   "name": "chatbot-ws",
   "version": "1.0.0",
-  "description": "Plataforma Empresarial de Chatbots de Respuesta Inmediata para WhatsApp en LATAM con motor LLM agnóstico de proveedor",
+  "description": "Plataforma omnicanal de atención, ventas y automatización con IA (WhatsApp, Instagram, Telegram, TikTok y canales propios) con motor LLM agnóstico de proveedor",
   "main": "dist/server.js",
   "type": "module",
   "scripts": {
