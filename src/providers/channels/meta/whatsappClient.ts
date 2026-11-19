@@ -1,5 +1,6 @@
-import { env } from '../../config/env.js';
-import { logger } from '../../utils/logger.js';
+import { env } from '../../../config/env.js';
+import { getMetaConfig } from './metaConfig.js';
+import { logger } from '../../../utils/logger.js';
 
 export interface SendMessageResponse {
   messaging_product: string;
@@ -70,13 +71,14 @@ export class WhatsAppClient {
     text: string
   ): Promise<string> {
     const url = `${this.baseUrl}/${phoneNumberId}/messages`;
+    const { accessToken } = getMetaConfig();
 
     // En entorno de pruebas con token mock, simular wamid para no requerir red externa
     if (
       env.NODE_ENV === 'test' &&
-      (env.META_ACCESS_TOKEN.startsWith('test_') ||
-        env.META_ACCESS_TOKEN.includes('TEST_TOKEN') ||
-        env.META_ACCESS_TOKEN.startsWith('EAAB_TEST_'))
+      (accessToken.startsWith('test_') ||
+        accessToken.includes('TEST_TOKEN') ||
+        accessToken.startsWith('EAAB_TEST_'))
     ) {
       const mockWamid = `wamid.HBgL_OUTBOUND_${Date.now()}_${Math.random().toString(36).slice(2, 7)}==`;
       logger.debug({ to, mockWamid }, '[MOCK] Mensaje saliente simulado en entorno de test');
@@ -87,7 +89,7 @@ export class WhatsAppClient {
       const response = await fetch(url, {
         method: 'POST',
         headers: {
-          Authorization: `Bearer ${env.META_ACCESS_TOKEN}`,
+          Authorization: `Bearer ${accessToken}`,
           'Content-Type': 'application/json',
         },
         signal: AbortSignal.timeout(15000), // Timeout HTTP de 15 segundos
@@ -145,12 +147,14 @@ export class WhatsAppClient {
       return;
     }
 
+    const { accessToken } = getMetaConfig();
+
     try {
       const url = `${this.baseUrl}/${phoneNumberId}/messages`;
       await fetch(url, {
         method: 'POST',
         headers: {
-          Authorization: `Bearer ${env.META_ACCESS_TOKEN}`,
+          Authorization: `Bearer ${accessToken}`,
           'Content-Type': 'application/json',
         },
         signal: AbortSignal.timeout(5000), // 5s timeout para typing indicator

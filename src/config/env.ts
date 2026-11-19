@@ -7,9 +7,21 @@ dotenv.config();
 const envSchema = z.object({
   PORT: z.coerce.number().default(3000),
   NODE_ENV: z.enum(['development', 'production', 'test']).default('development'),
-  META_ACCESS_TOKEN: z.string().min(10, 'META_ACCESS_TOKEN requerido'),
-  META_APP_SECRET: z.string().min(10, 'META_APP_SECRET requerido para validación HMAC SHA-256'),
-  WEBHOOK_VERIFY_TOKEN: z.string().min(6, 'WEBHOOK_VERIFY_TOKEN requerido'),
+  // Credenciales del adaptador Meta/WhatsApp: obligatorias solo si
+  // CHANNELS_ENABLED incluye "whatsapp" (se validan al arrancar el canal).
+  META_ACCESS_TOKEN: z.preprocess(
+    (value) => (typeof value === 'string' && value.trim() === '' ? undefined : value),
+    z.string().min(10).optional()
+  ),
+  META_APP_SECRET: z.preprocess(
+    (value) => (typeof value === 'string' && value.trim() === '' ? undefined : value),
+    z.string().min(10).optional()
+  ),
+  WEBHOOK_VERIFY_TOKEN: z.preprocess(
+    (value) => (typeof value === 'string' && value.trim() === '' ? undefined : value),
+    z.string().min(6).optional()
+  ),
+  CHANNELS_ENABLED: z.string().default('whatsapp'),
   // Proveedor LLM genérico (API compatible con Chat Completions de OpenAI).
   // Sin nombres de proveedor hardcodeados: todo se configura por entorno.
   LLM_API_KEY: z.string().min(10, 'LLM_API_KEY requerida para el proveedor LLM'),

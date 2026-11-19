@@ -2,9 +2,12 @@ import pg from 'pg';
 import { db } from '../providers/database/dbClient.js';
 import { CONSTANTS } from '../config/constants.js';
 import { logger } from '../utils/logger.js';
+import { normalizeChannelName } from '../providers/channels/channelTypes.js';
 
 export interface InboundEventRecord {
   id: string;
+  /** Canal de origen (whatsapp, telegram, instagram, ...). */
+  channel?: string;
   wamid: string;
   phone_number_id: string;
   sender_phone: string;
@@ -36,14 +39,15 @@ export class InboundRepository {
       phoneNumberId: string;
       senderPhone: string;
       payload: unknown;
+      channel?: string;
     },
     client?: pg.PoolClient
   ): Promise<InboundEventRecord | null> {
     const query = `
       INSERT INTO public.inbound_events (
-        wamid, phone_number_id, sender_phone, payload
+        wamid, phone_number_id, sender_phone, payload, channel
       )
-      VALUES ($1, $2, $3, $4)
+      VALUES ($1, $2, $3, $4, $5)
       ON CONFLICT (wamid) DO NOTHING
       RETURNING *;
     `;
@@ -54,6 +58,7 @@ export class InboundRepository {
       params.phoneNumberId,
       params.senderPhone,
       JSON.stringify(params.payload),
+      normalizeChannelName(params.channel),
     ]);
 
     return (result.rows[0] as InboundEventRecord) || null;

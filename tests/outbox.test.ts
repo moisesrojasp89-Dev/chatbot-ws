@@ -3,7 +3,7 @@ import { db } from '../src/providers/database/dbClient.js';
 import { outboxRepository } from '../src/repositories/outboxRepository.js';
 import { outboxDispatcher, OutboxDispatcher } from '../src/services/outboxDispatcher.js';
 import { messageRepository } from '../src/repositories/messageRepository.js';
-import { whatsappClient } from '../src/providers/meta/whatsappClient.js';
+import { whatsappClient } from '../src/providers/channels/meta/whatsappClient.js';
 import { contactRepository } from '../src/repositories/contactRepository.js';
 import { conversationRepository } from '../src/repositories/conversationRepository.js';
 

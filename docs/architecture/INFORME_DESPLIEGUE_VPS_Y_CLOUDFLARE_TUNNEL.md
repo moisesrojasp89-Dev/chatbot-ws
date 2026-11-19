@@ -140,7 +140,7 @@ La base de datos PostgreSQL se conecta a través del Transaction Pooler IPv4 de 
 * **Puerto:** `6543`
 * **Base de Datos:** `postgres`
 * **Historial de Migraciones:** Verificado y registrado en `public.migrations_history`.
-* **Migraciones Ejecutadas (12 de 12 aplicadas al 100%):**
+* **Migraciones Ejecutadas (14 de 14 aplicadas al 100%):**
   1. `001_initial_schema.sql` (Tablas maestras de chats, mensajes, contactos)
   2. `002_outbox_and_statuses.sql` (Patrón Transaccional Outbox)
   3. `003_outbox_resilience_locked_at.sql`

@@ -64,6 +64,7 @@ export type OutboxStatus = 'PENDING' | 'PROCESSING' | 'SENT' | 'FAILED';
 
 export interface OutboxRecord {
   id: string;
+  channel?: string;
   conversation_id: string | null;
   phone_number_id: string;
   recipient_phone: string;

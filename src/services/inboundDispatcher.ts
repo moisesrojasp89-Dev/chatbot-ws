@@ -19,6 +19,7 @@ import {
 import { CircuitBreaker, CircuitOpenError } from '../utils/circuitBreaker.js';
 import { CONSTANTS } from '../config/constants.js';
 import { logger } from '../utils/logger.js';
+import { normalizeChannelName } from '../providers/channels/channelTypes.js';
 import { ContactRecord, ConversationRecord } from '../types/states.js';
 
 export class InboundDispatcher {
@@ -286,6 +287,7 @@ export class InboundDispatcher {
       const conversation = await conversationRepository.getOrCreateActiveSession(contact.id);
       await outboxRepository.enqueueMessage({
         conversationId: conversation.id,
+        channel: normalizeChannelName(event.channel),
         phoneNumberId: event.phone_number_id,
         recipientPhone: event.sender_phone,
         messageType: 'text',
@@ -591,6 +593,7 @@ export class InboundDispatcher {
           await outboxRepository.enqueueMessage(
             {
               conversationId: conversation.id,
+              channel: normalizeChannelName(primaryEvent.channel),
               phoneNumberId: primaryEvent.phone_number_id,
               recipientPhone: from,
               messageType: 'text',
@@ -704,6 +707,7 @@ export class InboundDispatcher {
       await outboxRepository.enqueueMessage(
         {
           conversationId: conversation.id,
+          channel: normalizeChannelName(primaryEvent.channel),
           phoneNumberId: primaryEvent.phone_number_id,
           recipientPhone: primaryEvent.sender_phone,
           messageType: 'text',
@@ -783,6 +787,7 @@ export class InboundDispatcher {
         await outboxRepository.enqueueMessage(
           {
             conversationId: activeConversation.id,
+            channel: normalizeChannelName(primaryEvent.channel),
             phoneNumberId: primaryEvent.phone_number_id,
             recipientPhone: primaryEvent.sender_phone,
             messageType: 'text',

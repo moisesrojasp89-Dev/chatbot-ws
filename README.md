@@ -5,7 +5,7 @@
 [![LLM](https://img.shields.io/badge/LLM-Provider_Agnostic-blueviolet.svg)](#-arquitectura-dual-daemon--harness-con-rigor-de-ingeniería)
 [![PostgreSQL](https://img.shields.io/badge/PostgreSQL-16-blue.svg)](https://www.postgresql.org/)
 [![Multichannel](https://img.shields.io/badge/Channels-Multichannel-25D366.svg)](#-canales-y-verticales)
-[![Tests](https://img.shields.io/badge/Tests-134%2F134_Passing-success.svg)](./tests)
+[![Tests](https://img.shields.io/badge/Tests-143%2F143_Passing-success.svg)](./tests)
 [![Quality Gate](https://img.shields.io/badge/Quality_Gate-Certified_100%25-success.svg)](#-quality-gate-y-certificación-institucional)
 
 Plataforma **omnicanal** de atención, ventas y automatización con IA para empresas de LATAM. Un solo núcleo conversacional —memoria, FSM, guardrails y herramientas de negocio— está diseñado para operar sobre **WhatsApp, Instagram, Telegram, TikTok o canales propios**, con motor LLM intercambiable y sin lock-in de proveedor.
@@ -52,7 +52,7 @@ $$\text{Plataforma Omnicanal} = \text{Capa de Canales} + \text{Pipeline Inbound 
    * **Presupuesto ReAct & AbortSignal:** `deadlineMs` global de 24s distribuido entre turnos para nunca exceder el lease de 30s.
    * **Readiness Probe (`GET /ready`):** Monitoreo de salud operativa para orquestadores de contenedores (Kubernetes/Docker).
 4. **Seguridad y Privacidad LGPD / GDPR:**
-   * **Row Level Security (RLS):** Habilitado en todas las tablas sensibles del esquema `public` con revocación de privilegios para roles `anon` y `authenticated` (Migraciones 001 a 013).
+   * **Row Level Security (RLS):** Habilitado en todas las tablas sensibles del esquema `public` con revocación de privilegios para roles `anon` y `authenticated` (Migraciones 001 a 014).
    * **Sanitizador Recursivo de Logs:** Enmascaramiento automático de teléfonos E.164, tokens Bearer y API keys.
 5. **Harness Agéntico & Guardrails Multi-Nivel:**
    * Grounding Lock por código (mitigación de alucinaciones de precios).
@@ -85,14 +85,14 @@ Chatbot WS/
 ├── src/
 │   ├── config/                  # Constantes y variables de entorno validadas con Zod
 │   ├── controllers/             # Gateway Webhook Meta con HMAC SHA-256 y reconciliación de estados
-│   ├── database/                # Migraciones DDL SQL (001 a 013) y runner automatizado
+│   ├── database/                # Migraciones DDL SQL (001 a 014) y runner automatizado
 │   ├── harness/                 # Motor Agéntico, Context Manager, Tools y Guardrails
 │   ├── middleware/              # Rate Limiter Token Bucket por teléfono
-│   ├── providers/               # Clientes externos (PostgreSQL, proveedor LLM compatible OpenAI, Meta Graph API)
+│   ├── providers/               # Clientes externos (PostgreSQL, proveedor LLM, adaptadores de canal)
 │   ├── repositories/            # Repositorios SQL (Inbound, Outbox, Contact, Conversation, Message, etc.)
 │   ├── services/                # Daemons asíncronos (InboundDispatcher, OutboxDispatcher, RetentionService)
 │   └── utils/                   # Circuit Breaker, crypto HMAC, logger estructurado con sanitizador PII
-└── tests/                       # Suite de 15 archivos de pruebas con Vitest (134/134 passing)
+└── tests/                       # Suite de 16 archivos de pruebas con Vitest (143/143 passing)
 ```
 
 ---
@@ -109,7 +109,7 @@ El script ejecuta 4 verificaciones deterministas:
 1. **Compilación TypeScript AST:** `tsc --noEmit` (0 errores, 0 advertencias, prohibido `any` indiscriminado).
 2. **Escaneo Zero-Trust:** Inspección exhaustiva contra tokens reales de Meta, API keys del proveedor LLM y credenciales en texto plano.
 3. **Integridad de Configuración & Harness:** Validación bidireccional entre `.env.example`, `.gitignore`, `src/config/env.ts` y `AGENTS.md`.
-4. **Suite Completa de Pruebas Unitarias/Integración:** `vitest run` ejecutando las 134 pruebas automatizadas al 100%.
+4. **Suite Completa de Pruebas Unitarias/Integración:** `vitest run` ejecutando las 143 pruebas automatizadas al 100%.
 
 ---
 
@@ -139,8 +139,13 @@ LLM_BASE_URL=https://api.openai.com/v1
 LLM_MODEL=nombre-del-modelo
 ```
 
+Canales habilitados por configuración (cada canal debe tener su adaptador registrado):
+```dotenv
+CHANNELS_ENABLED=whatsapp
+```
+
 ### 4. Migraciones de Base de Datos
-Ejecuta las migraciones incrementales (001 a 013):
+Ejecuta las migraciones incrementales (001 a 014):
 ```bash
 npm run migrate
 ```
@@ -165,8 +170,8 @@ npm run quality-gate
 ## 🧪 Estado de la Suite de Pruebas
 
 ```bash
- Test Files  15 passed (15)
-      Tests  134 passed (134)
+ Test Files  16 passed (16)
+      Tests  143 passed (143)
    Coverage  Pipelines Inbound/Outbox, Circuit Breakers, Guardrails, Webhook HMAC, Multi-Tenant RLS
 ```
 

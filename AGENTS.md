@@ -71,7 +71,7 @@
 - **Prohibido** ramificar con `if (channel === 'whatsapp')` dentro del harness o los servicios; se resuelve por polimorfismo/registro.
 - Un adaptador nuevo **no puede exigir cambios en el harness**; si los exige, el diseño del adaptador es incorrecto.
 
-> **Deuda técnica conocida:** `OutboxDispatcher` aún importa `providers/meta/whatsappClient`. Debe migrarse a `ChannelSender` **antes de habilitar el segundo canal**. Esta deuda no se propaga: ningún servicio nuevo puede importar Meta directamente.
+> **Deuda técnica conocida (Ola 0 completada):** el **egress** ya usa `ChannelSender` y `OutboxDispatcher` no importa Meta. Queda pendiente para la Ola 1: el **ingress** Meta-específico (`/webhook`, `webhookController`, `types/meta`), la unicidad inbound `wamid` → `(channel, external_message_id)` y la coalescencia con predicado de canal. Ningún servicio nuevo puede importar Meta directamente. Mientras no exista un adaptador no-Meta registrado, `CHANNELS_ENABLED=telegram` falla en el arranque por diseño; el arranque sin credenciales de Meta llega con la Ola 1 (primer adaptador no-Meta).
 
 ---
 

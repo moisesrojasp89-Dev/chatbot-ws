@@ -5,6 +5,7 @@ import { handleVerifyWebhook, handleIncomingWebhook } from './controllers/webhoo
 import { logger } from './utils/logger.js';
 import { db } from './providers/database/dbClient.js';
 import { inboundDispatcher } from './services/inboundDispatcher.js';
+import { channelRegistry } from './providers/channels/channelRegistry.js';
 
 let isShuttingDown = false;
 
@@ -20,6 +21,9 @@ export async function buildApp(): Promise<FastifyInstance> {
   const app = Fastify({
     logger: false, // Usamos nuestra instancia personalizada de Pino
   });
+
+  // Valida canales habilitados y su configuración antes de exponer rutas.
+  channelRegistry.validateEnabledChannels();
 
   // 1. Registro de CORS
   await app.register(cors, {
@@ -73,18 +77,22 @@ export async function buildApp(): Promise<FastifyInstance> {
     };
   });
 
-  // 5. Rutas de Webhook de Meta WhatsApp Cloud API
-  app.get('/webhook', handleVerifyWebhook);
+  // 5. Rutas del adaptador Meta/WhatsApp (solo si el canal está habilitado)
+  if (channelRegistry.isEnabled('whatsapp')) {
+    app.get('/webhook', handleVerifyWebhook);
 
-  app.post(
-    '/webhook',
-    {
-      config: {
-        rawBody: true, // Habilita la captura del rawBody para validación HMAC SHA-256
+    app.post(
+      '/webhook',
+      {
+        config: {
+          rawBody: true, // Habilita la captura del rawBody para validación HMAC SHA-256
+        },
       },
-    },
-    handleIncomingWebhook
-  );
+      handleIncomingWebhook
+    );
+  } else {
+    logger.info('Canal WhatsApp deshabilitado: rutas /webhook no registradas');
+  }
 
   return app;
 }

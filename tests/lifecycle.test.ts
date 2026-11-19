@@ -2,7 +2,7 @@ import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import { db } from '../src/providers/database/dbClient.js';
 import { outboxRepository } from '../src/repositories/outboxRepository.js';
 import { outboxDispatcher } from '../src/services/outboxDispatcher.js';
-import { whatsappClient } from '../src/providers/meta/whatsappClient.js';
+import { whatsappClient } from '../src/providers/channels/meta/whatsappClient.js';
 import { metaCircuitBreaker } from '../src/utils/circuitBreaker.js';
 import { typingCadence } from '../src/harness/typingCadence.js';
 import { contactRepository } from '../src/repositories/contactRepository.js';

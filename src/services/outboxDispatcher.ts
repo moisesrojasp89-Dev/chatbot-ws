@@ -1,7 +1,12 @@
 import { outboxRepository } from '../repositories/outboxRepository.js';
 import { messageRepository } from '../repositories/messageRepository.js';
-import { whatsappClient, MetaGraphApiError } from '../providers/meta/whatsappClient.js';
-import { metaCircuitBreaker, CircuitOpenError } from '../utils/circuitBreaker.js';
+import { channelRegistry } from '../providers/channels/channelRegistry.js';
+import {
+  ChannelSendError,
+  isTransientChannelError,
+  normalizeChannelName,
+} from '../providers/channels/channelTypes.js';
+import { channelCircuitBreaker, CircuitOpenError } from '../utils/circuitBreaker.js';
 import { typingCadence } from '../harness/typingCadence.js';
 import { CONSTANTS } from '../config/constants.js';
 import { logger } from '../utils/logger.js';
@@ -27,7 +32,7 @@ export class OutboxDispatcher {
     this.pausedUntil = Date.now() + durationMs;
     logger.fatal(
       { pausedUntil: new Date(this.pausedUntil).toISOString(), durationMinutes: durationMs / 60000 },
-      '🚨 ALERTA CRÍTICA: OutboxDispatcher pausado globalmente por error sistémico en Meta API'
+      '🚨 ALERTA CRÍTICA: OutboxDispatcher pausado globalmente por error sistémico del proveedor de canal'
     );
   }
 
@@ -142,7 +147,7 @@ export class OutboxDispatcher {
     }
 
     // B1: No reclamar si el Circuit Breaker está en OPEN
-    if (metaCircuitBreaker.getState() === 'OPEN') {
+    if (channelCircuitBreaker.getState() === 'OPEN') {
       logger.debug('Breaker en estado OPEN: Omitiendo reclamo de lote para no saturar');
       return 0;
     }
@@ -201,6 +206,14 @@ export class OutboxDispatcher {
             { recipient: record.recipient_phone, outboxId: record.id },
             '❌ Mensaje falló de forma terminal (4xx cliente o max reintentos agotados)'
           );
+          // Los hermanos del mismo destinatario no deben quedar varados en PROCESSING:
+          // se liberan para que se reintenten sin consumir su presupuesto.
+          for (let j = i + 1; j < messagesForPhone.length; j++) {
+            const brother = messagesForPhone[j];
+            if (brother.lock_token) {
+              await outboxRepository.release(brother.id, brother.lock_token, 0);
+            }
+          }
           break;
         } else {
           // result === 'RETRY' || result === 'DEFERRED'
@@ -256,7 +269,7 @@ export class OutboxDispatcher {
    */
   private async dispatchSingleMessage(record: OutboxRecord): Promise<DispatchResult> {
     // B1: Si el breaker se abrió en medio del lote, liberar sin esperar
-    if (metaCircuitBreaker.getState() === 'OPEN') {
+    if (channelCircuitBreaker.getState() === 'OPEN') {
       if (record.lock_token) {
         await outboxRepository.release(
           record.id,
@@ -267,11 +280,30 @@ export class OutboxDispatcher {
       return 'DEFERRED';
     }
 
+    const channel = normalizeChannelName(record.channel);
+    if (!channelRegistry.isEnabled(channel)) {
+      // Deshabilitar un canal es una acción reversible del operador: no se quema el mensaje.
+      logger.warn({ outboxId: record.id, channel }, '⏸️ Canal no habilitado en CHANNELS_ENABLED: liberando mensaje para cuando se reactive');
+      if (record.lock_token) {
+        await outboxRepository.release(record.id, record.lock_token, 300);
+      }
+      return 'DEFERRED';
+    }
+    if (!channelRegistry.has(channel)) {
+      const message = `Canal no registrado: ${channel}`;
+      logger.error({ outboxId: record.id, channel }, '❌ Canal sin adaptador registrado: marcando mensaje como FAILED');
+      if (record.lock_token) {
+        await outboxRepository.terminalFailed(record.id, record.lock_token, message);
+      }
+      return 'FAILED';
+    }
+    const sender = channelRegistry.get(channel);
+
     // S5: Simular cadencia humana de escritura
-    await typingCadence.simulateTyping(record.phone_number_id, record.recipient_phone);
+    await typingCadence.simulateTyping(record.phone_number_id, record.recipient_phone, undefined, channel);
 
     // Auditor Point 1 & Ajuste Menor: Pre-Send Fencing Check
-    // Comprobar que el lease sigue activo inmediatamente antes de la llamada irreversible a Meta
+    // Comprobar que el lease sigue activo inmediatamente antes de la llamada irreversible al proveedor
     if (!record.lock_token) {
       logger.error({ outboxId: record.id }, 'Registro de outbox sin lock_token requerido');
       return 'LEASE_LOST';
@@ -281,7 +313,7 @@ export class OutboxDispatcher {
     if (!isLeaseStillValid) {
       logger.warn(
         { outboxId: record.id },
-        '🛑 Fencing Pre-Send: Lease expirado antes de contactar a Meta. Omitiendo llamada externa para evitar duplicado.'
+        '🛑 Fencing Pre-Send: Lease expirado antes de contactar al proveedor. Omitiendo llamada externa para evitar duplicado.'
       );
       return 'LEASE_LOST';
     }
@@ -289,24 +321,25 @@ export class OutboxDispatcher {
     // =========================================================================
     // FASE 1: Llamada de Red Externa protegida por Circuit Breaker (B1, I14, R1)
     // =========================================================================
-    let wamid: string;
+    let externalMessageId: string;
     try {
-      wamid = await metaCircuitBreaker.execute(
-        async () => {
-          return whatsappClient.sendTextMessage(
-            record.phone_number_id,
-            record.recipient_phone,
-            record.content
-          );
-        },
+      const sendResult = await channelCircuitBreaker.execute(
+        async () =>
+          sender.sendText({
+            accountId: record.phone_number_id,
+            recipientId: record.recipient_phone,
+            text: record.content,
+            outboxId: record.id,
+          }),
         (error) => {
-          // I14: Solo errores transitorios (5xx, 429, timeouts, 131056) cuentan en el Circuit Breaker
-          if (error instanceof MetaGraphApiError) {
-            return error.isTransient;
+          // Solo errores transitorios del canal cuentan para abrir el Circuit Breaker
+          if (error instanceof ChannelSendError) {
+            return isTransientChannelError(error);
           }
           return true;
         }
       );
+      externalMessageId = sendResult.externalMessageId;
     } catch (networkError) {
       // Auditor R1: Rechazo del Circuit Breaker (OPEN o HALF_OPEN_BUSY) -> DEFERRED sin quemar reintentos
       if (networkError instanceof CircuitOpenError) {
@@ -325,21 +358,21 @@ export class OutboxDispatcher {
       const errorMessage = networkError instanceof Error ? networkError.message : String(networkError);
 
       // Auditor Point 3: Errores Sistémicos de Credenciales o Cuenta (401, 190, 131031, etc.)
-      if (networkError instanceof MetaGraphApiError && networkError.isSystemicAuth) {
+      if (networkError instanceof ChannelSendError && networkError.kind === 'SYSTEMIC_AUTH') {
         this.pauseGlobal(5 * 60 * 1000); // Pausa global de 5 minutos
         logger.fatal(
           { outboxId: record.id, error: errorMessage },
-          '🚨 ALERTA CRÍTICA: Error sistémico en Meta API. Despachador pausado globalmente. Mensaje retenido en PENDING.'
+          '🚨 ALERTA CRÍTICA: Error sistémico del proveedor de canal. Despachador pausado globalmente. Mensaje retenido en PENDING.'
         );
         await outboxRepository.release(record.id, record.lock_token, 300);
         return 'DEFERRED';
       }
 
       // I14 & Auditor 5A: Errores 4xx de cliente (número inválido, ventana 24h) -> FAILED terminal de inmediato
-      if (networkError instanceof MetaGraphApiError && !networkError.isTransient) {
+      if (networkError instanceof ChannelSendError && networkError.kind === 'FATAL') {
         logger.error(
           { outboxId: record.id, error: errorMessage },
-          '❌ Error permanente de cliente de Meta. Marcando como FAILED'
+          '❌ Error permanente del canal. Marcando como FAILED'
         );
         await outboxRepository.terminalFailed(record.id, record.lock_token, errorMessage);
         return 'FAILED';
@@ -372,7 +405,7 @@ export class OutboxDispatcher {
     }
 
     // =========================================================================
-    // FASE 2: Mensaje YA aceptado por Meta. NUNCA revertir a PENDING ni llamar a markFailed (B3)
+    // FASE 2: Mensaje YA aceptado por el proveedor. NUNCA revertir a PENDING ni llamar a markFailed (B3)
     // Fencing Estricto: Compara record.lock_token UUID obligatorio
     // Ajuste menor: 3 reintentos cortos de markSent con backoff antes de rendirse
     // Auditor 5A: Si falla, reintentar en background con presupuesto (< stop_grace_period)
@@ -381,7 +414,7 @@ export class OutboxDispatcher {
     let markSentError: unknown = null;
     for (let attempt = 0; attempt < 3; attempt++) {
       try {
-        sentRecord = await outboxRepository.markSent(record.id, wamid, record.lock_token);
+        sentRecord = await outboxRepository.markSent(record.id, externalMessageId, record.lock_token);
         markSentError = null;
         break;
       } catch (err) {
@@ -394,7 +427,7 @@ export class OutboxDispatcher {
 
     if (markSentError) {
       logger.error(
-        { outboxId: record.id, wamid, error: markSentError },
+        { outboxId: record.id, externalMessageId, error: markSentError },
         '🚨 Fallo inmediato en markSent: programando reintento en segundo plano con presupuesto acotado'
       );
       // Auditor 5A: Reintento en segundo plano con presupuesto (~20s < 30s de Docker), registrado en backgroundTasks
@@ -406,15 +439,15 @@ export class OutboxDispatcher {
           attempt++;
           await new Promise((r) => setTimeout(r, Math.min(1000 * attempt, 4000)));
           try {
-            const updated = await outboxRepository.markSent(record.id, wamid, record.lock_token!);
+            const updated = await outboxRepository.markSent(record.id, externalMessageId, record.lock_token!);
             if (!updated) {
               logger.warn(
-                { outboxId: record.id, wamid },
+                { outboxId: record.id, externalMessageId },
                 'Reintento de markSent abortado: lease perdido (0 filas afectadas en DB)'
               );
               return;
             }
-            logger.info({ outboxId: record.id, wamid }, '✅ markSent confirmado en reintento background');
+            logger.info({ outboxId: record.id, externalMessageId }, '✅ markSent confirmado en reintento background');
             return;
           } catch (retryErr) {
             markSentError = retryErr;
@@ -423,9 +456,9 @@ export class OutboxDispatcher {
 
         // Auditor 5A: Intento final antes de rendirse con alerta de reconciliación manual
         try {
-          const finalUpdated = await outboxRepository.markSent(record.id, wamid, record.lock_token!);
+          const finalUpdated = await outboxRepository.markSent(record.id, externalMessageId, record.lock_token!);
           if (finalUpdated) {
-            logger.info({ outboxId: record.id, wamid }, '✅ markSent confirmado en intento final de cierre');
+            logger.info({ outboxId: record.id, externalMessageId }, '✅ markSent confirmado en intento final de cierre');
             return;
           }
         } catch (finalErr) {
@@ -433,7 +466,7 @@ export class OutboxDispatcher {
         }
 
         logger.error(
-          { outboxId: record.id, wamid, error: markSentError },
+          { outboxId: record.id, externalMessageId, error: markSentError },
           '🚨 RECONCILIACIÓN MANUAL REQUERIDA: markSent agotó presupuesto de reintento sin confirmar en DB'
         );
       })();
@@ -441,13 +474,13 @@ export class OutboxDispatcher {
       this.backgroundTasks.add(bgRetry);
       bgRetry
         .catch((err) => {
-          logger.error({ outboxId: record.id, wamid, err }, 'Error no capturado en bgRetry de markSent');
+          logger.error({ outboxId: record.id, externalMessageId, err }, 'Error no capturado en bgRetry de markSent');
         })
         .finally(() => this.backgroundTasks.delete(bgRetry));
     } else if (!sentRecord) {
       logger.warn(
-        { outboxId: record.id, wamid },
-        '⚠️ Fencing Post-Send: markSent afectó 0 filas. El lease expiró en BD pero el mensaje ya fue despachado a Meta.'
+        { outboxId: record.id, externalMessageId },
+        '⚠️ Fencing Post-Send: markSent afectó 0 filas. El lease expiró en BD pero el mensaje ya fue despachado por el canal.'
       );
     }
 
@@ -455,7 +488,7 @@ export class OutboxDispatcher {
       try {
         await messageRepository.saveOutboundMessage({
           conversationId: record.conversation_id,
-          wamid,
+          wamid: externalMessageId,
           content: record.content,
           promptTokens: record.prompt_tokens,
           completionTokens: record.completion_tokens,
@@ -463,13 +496,13 @@ export class OutboxDispatcher {
         });
         // Auditor 5A: saveOutboundMessage ya nace con piso 'sent', eliminando llamada redundante
       } catch (saveErr) {
-        logger.error({ outboxId: record.id, wamid, saveErr }, 'Error al guardar mensaje en historial local');
+        logger.error({ outboxId: record.id, externalMessageId, saveErr }, 'Error al guardar mensaje en historial local');
       }
     }
 
     logger.info(
-      { outboxId: record.id, wamid, recipient: record.recipient_phone },
-      '✅ Mensaje despachado exitosamente a Meta WhatsApp API'
+      { outboxId: record.id, externalMessageId, channel, recipient: record.recipient_phone },
+      '✅ Mensaje despachado exitosamente por el canal ' + channel
     );
     return 'SENT';
   }

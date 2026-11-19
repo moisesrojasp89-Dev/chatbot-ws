@@ -1,6 +1,6 @@
 import { env } from '../config/env.js';
 import { logger } from '../utils/logger.js';
-import { whatsappClient } from '../providers/meta/whatsappClient.js';
+import { channelRegistry } from '../providers/channels/channelRegistry.js';
 
 export class TypingCadenceSimulator {
   /**
@@ -10,12 +10,19 @@ export class TypingCadenceSimulator {
    * En entorno de test, el delay se minimiza a 5ms para mantener la suite veloz.
    */
   public async simulateTyping(
-    phoneNumberId: string,
-    recipientPhone: string,
-    customDelayMs?: number
+    accountId: string,
+    recipientId: string,
+    customDelayMs?: number,
+    channel: string = 'whatsapp'
   ): Promise<void> {
-    // 1. Enviar estado typing a Meta
-    await whatsappClient.sendTypingIndicator(phoneNumberId, recipientPhone);
+    // 1. Enviar estado typing a través del adaptador de canal (si lo soporta)
+    try {
+      const sender = channelRegistry.get(channel);
+      await sender.sendTyping?.(accountId, recipientId);
+    } catch (err) {
+      // El indicador de typing es best-effort: nunca debe tumbar el despacho ni dejar filas bloqueadas.
+      logger.warn({ err, channel }, 'No se pudo enviar el indicador de typing (best-effort)');
+    }
 
     // 2. Cálculo del retardo humanizado
     let delay: number;
@@ -27,7 +34,7 @@ export class TypingCadenceSimulator {
       delay = 1500 + Math.random() * 1000; // 1500ms a 2500ms
     }
 
-    logger.debug({ recipientPhone, delayMs: Math.round(delay) }, '⏳ Simulando cadencia humana de escritura');
+    logger.debug({ recipientId, channel, delayMs: Math.round(delay) }, '⏳ Simulando cadencia humana de escritura');
     await new Promise((resolve) => setTimeout(resolve, delay));
   }
 }

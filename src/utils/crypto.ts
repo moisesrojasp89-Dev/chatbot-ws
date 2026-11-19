@@ -1,5 +1,5 @@
 import crypto from 'node:crypto';
-import { env } from '../config/env.js';
+import { getMetaConfig } from '../providers/channels/meta/metaConfig.js';
 import { logger } from './logger.js';
 
 const SHA256_HEX_REGEX = /^[0-9a-fA-F]{64}$/;
@@ -31,7 +31,7 @@ export function validateMetaSignature(
 
     // Obtener el digest directamente como Buffer de 32 bytes (sin pasar por string hex intermedio)
     const calculatedBuffer = crypto
-      .createHmac('sha256', env.META_APP_SECRET)
+      .createHmac('sha256', getMetaConfig().appSecret)
       .update(bodyBuffer)
       .digest();
 

@@ -1,0 +1,91 @@
+/**
+ * Contrato neutro de canales de mensajería.
+ *
+ * El núcleo (harness, servicios, repositorios) solo depende de estos tipos y de
+ * ChannelRegistry. Ningún SDK/cliente de un proveedor debe importarse desde aquí.
+ */
+
+export const DEFAULT_CHANNEL = 'whatsapp';
+
+/** Normaliza el nombre de canal para evitar variantes ('WhatsApp ', 'TELEGRAM'). */
+export function normalizeChannelName(value?: string | null): string {
+  const normalized = (value ?? '').trim().toLowerCase();
+  return normalized.length > 0 ? normalized : DEFAULT_CHANNEL;
+}
+
+export interface ChannelSendRequest {
+  /** Identificador de la cuenta del negocio en el canal (phone_number_id en WhatsApp). */
+  accountId: string;
+  /** Identificador del destinatario en el canal (teléfono E.164, chat_id, etc.). */
+  recipientId: string;
+  text: string;
+  /** Id del registro en outbox, útil para idempotencia del proveedor. */
+  outboxId?: string;
+}
+
+export interface ChannelSendResult {
+  /** Id externo del mensaje aceptado por el proveedor (wamid en WhatsApp). */
+  externalMessageId: string;
+}
+
+export type ChannelErrorKind =
+  | 'SYSTEMIC_AUTH'
+  | 'FATAL'
+  | 'RATE_LIMIT'
+  | 'TRANSIENT'
+  | 'NETWORK';
+
+export class ChannelSendError extends Error {
+  public readonly kind: ChannelErrorKind;
+  public readonly status?: number;
+  public readonly retryAfterSeconds?: number;
+
+  constructor(
+    kind: ChannelErrorKind,
+    message: string,
+    options?: { cause?: unknown; status?: number; retryAfterSeconds?: number }
+  ) {
+    super(message);
+    this.name = 'ChannelSendError';
+    this.kind = kind;
+    this.status = options?.status;
+    this.retryAfterSeconds = options?.retryAfterSeconds;
+    if (options?.cause !== undefined) {
+      (this as Error & { cause?: unknown }).cause = options.cause;
+    }
+  }
+}
+
+export function isTransientChannelError(error: unknown): boolean {
+  return (
+    error instanceof ChannelSendError &&
+    (error.kind === 'RATE_LIMIT' || error.kind === 'TRANSIENT' || error.kind === 'NETWORK')
+  );
+}
+
+export interface ChannelSender {
+  readonly channel: string;
+  sendText(request: ChannelSendRequest): Promise<ChannelSendResult>;
+  /** Opcional: solo canales que soportan indicador de escritura/presencia. */
+  sendTyping?(accountId: string, recipientId: string): Promise<void>;
+}
+
+export interface NormalizedInboundMessage {
+  channel: string;
+  externalMessageId: string;
+  externalAccountId: string;
+  senderId: string;
+  occurredAt: Date;
+  type: string;
+  text?: string;
+  raw?: unknown;
+}
+
+/**
+ * Contrato para canales entrantes (webhooks). Se implementará por adaptador
+ * cuando se habilite el segundo canal; el núcleo nunca parsea payloads de proveedor.
+ */
+export interface ChannelAdapter extends ChannelSender {
+  verifyInbound(request: unknown): boolean | Promise<boolean>;
+  parseInbound(payload: unknown): NormalizedInboundMessage[];
+}

@@ -1,6 +1,6 @@
 import { FastifyRequest, FastifyReply } from 'fastify';
 import crypto from 'node:crypto';
-import { env } from '../config/env.js';
+import { getMetaConfig } from '../providers/channels/meta/metaConfig.js';
 import { validateMetaSignature } from '../utils/crypto.js';
 import { logger } from '../utils/logger.js';
 import { phoneRateLimiter } from '../middleware/rateLimiter.js';
@@ -31,7 +31,7 @@ export async function handleVerifyWebhook(
     typeof token === 'string' &&
     crypto.timingSafeEqual(
       crypto.createHash('sha256').update(token).digest(),
-      crypto.createHash('sha256').update(env.WEBHOOK_VERIFY_TOKEN).digest()
+      crypto.createHash('sha256').update(getMetaConfig().verifyToken).digest()
     );
 
   if (mode === 'subscribe' && isValidToken) {
@@ -159,6 +159,7 @@ export async function handleIncomingWebhook(
                 contact: value.contacts?.[0],
                 metadata: value.metadata,
               },
+              channel: 'whatsapp',
             });
 
             if (persisted) {

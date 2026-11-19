@@ -11,7 +11,7 @@ import { conversationRepository } from '../src/repositories/conversationReposito
 import { auditRepository } from '../src/repositories/auditRepository.js';
 import { db } from '../src/providers/database/dbClient.js';
 import { ContactRecord, ConversationRecord } from '../src/types/states.js';
-import { whatsappClient } from '../src/providers/meta/whatsappClient.js';
+import { whatsappClient } from '../src/providers/channels/meta/whatsappClient.js';
 
 describe('Fase 3 — Motor Agéntico (ReAct Loop & Tools)', () => {
   const mockContact: ContactRecord = {

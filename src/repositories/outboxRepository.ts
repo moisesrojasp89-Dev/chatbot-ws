@@ -2,10 +2,13 @@ import pg from 'pg';
 import { db } from '../providers/database/dbClient.js';
 import { OutboxRecord } from '../types/states.js';
 import { CONSTANTS } from '../config/constants.js';
+import { normalizeChannelName } from '../providers/channels/channelTypes.js';
 import { logger } from '../utils/logger.js';
 
 export interface EnqueueMessageParams {
   conversationId?: string | null;
+  /** Canal de salida; por defecto whatsapp (compatibilidad con registros previos). */
+  channel?: string;
   phoneNumberId: string;
   recipientPhone: string;
   messageType?: string;
@@ -29,9 +32,9 @@ export class OutboxRepository {
     const query = `
       INSERT INTO public.outbox_messages (
         conversation_id, phone_number_id, recipient_phone, message_type,
-        content, status, prompt_tokens, completion_tokens, latency_ms, max_retries
+        content, status, prompt_tokens, completion_tokens, latency_ms, max_retries, channel
       )
-      VALUES ($1, $2, $3, $4, $5, 'PENDING', $6, $7, $8, $9)
+      VALUES ($1, $2, $3, $4, $5, 'PENDING', $6, $7, $8, $9, $10)
       RETURNING *;
     `;
     const values = [
@@ -44,6 +47,7 @@ export class OutboxRepository {
       params.completionTokens || 0,
       params.latencyMs || 0,
       maxRetries,
+      normalizeChannelName(params.channel),
     ];
 
     const result = client

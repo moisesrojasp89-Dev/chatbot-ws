@@ -199,5 +199,9 @@ export class CircuitBreaker {
   }
 }
 
-// Instancia singleton por defecto para llamadas hacia Meta Cloud API
-export const metaCircuitBreaker = new CircuitBreaker();
+// Instancia singleton para el despacho saliente del canal activo
+/** Breaker del canal de salida (agnóstico al proveedor). */
+export const channelCircuitBreaker = new CircuitBreaker();
+
+/** @deprecated Alias de compatibilidad; usar channelCircuitBreaker. */
+export const metaCircuitBreaker = channelCircuitBreaker;
