@@ -71,7 +71,7 @@
 - **Prohibido** ramificar con `if (channel === 'whatsapp')` dentro del harness o los servicios; se resuelve por polimorfismo/registro.
 - Un adaptador nuevo **no puede exigir cambios en el harness**; si los exige, el diseño del adaptador es incorrecto.
 
-> **Deuda técnica conocida (Ola 0 completada):** el **egress** ya usa `ChannelSender` y `OutboxDispatcher` no importa Meta. La Ola 1 ya incorporó Telegram (ingress/egress), identidad inbound `(channel, wamid)` con coalescencia por canal, breaker/pausa aislados por canal y claim filtrado por canales sanos. Deuda restante: (a) los controllers de ingress aún no implementan el contrato `ChannelAdapter` unificado; (b) el nombre `wamid` se conserva como identificador externo genérico; (c) falta assert de esquema al arrancar y migración no concurrente; (d) Telegram MVP solo soporta texto; (e) no hay test de `buildApp()` solo-Telegram ni de no-leak de token. Ningún servicio nuevo puede importar Meta directamente.
+> **Deuda técnica conocida (Ola 0 completada):** el **egress** ya usa `ChannelSender` y `OutboxDispatcher` no importa Meta. La Ola 1 ya incorporó Telegram (ingress/egress), identidad inbound `(channel, wamid)` con coalescencia por canal, breaker/pausa aislados por canal y claim filtrado por canales sanos. Deuda restante: (a) los controllers de ingress aún no implementan el contrato `ChannelAdapter` unificado; (b) el nombre `wamid` se conserva como identificador externo genérico; (c) falta estrategia de migración no concurrente para tablas calientes; (d) Telegram MVP solo soporta texto; (e) no hay test de `buildApp()` solo-Telegram ni de no-leak de token. Ningún servicio nuevo puede importar Meta directamente.
 
 ---
 

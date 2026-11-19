@@ -92,6 +92,8 @@ sudo systemctl start chatbot-ws
 
 **No hagas rolling deploy de la 015:** el código viejo usa `ON CONFLICT (wamid)` y, tras eliminar esa constraint, fallaría con `42P10`. El código nuevo también falla con `42P10` si arranca **antes** de aplicar la 015.
 
+> En systemd, configura Restart=on-failure y revisa journalctl -u chatbot-ws. Si el guard de esquema falla, el proceso aborta con exit 1 y no acepta webhooks.
+
 ### Entornos nuevos
 
 `npm run migrate` aplica todo el historial. No hay que ejecutar SQL a mano.
@@ -123,6 +125,7 @@ El adaptador valida `X-Telegram-Bot-Api-Secret-Token` y responde `200` tras pers
 - [ ] `GET /health` → `200` con `database: connected`.
 - [ ] `GET /ready` → `200` con `status: ready`.
 - [ ] `SELECT count(*) FROM migrations_history` → `15`.
+- [ ] El arranque validó el esquema (migraciones 014/015, columna `channel` y unicidad por canal).
 - [ ] Webhook de Meta verificado (`GET /webhook` challenge).
 - [ ] Webhook de Telegram registrado (`getWebhookInfo`).
 - [ ] Un mensaje de prueba entra, se persiste y responde por el mismo canal.
@@ -135,6 +138,7 @@ El adaptador valida `X-Telegram-Bot-Api-Secret-Token` y responde `200` tras pers
 | Síntoma | Causa probable | Acción |
 | :--- | :--- | :--- |
 | `42P10` en inbound | Migración 015 no aplicada o código viejo tras migrar | `stop → npm run migrate → start` |
+| Arranque aborta con "Esquema incompatible" | Faltan migraciones 014/015, columnas `channel` o unicidad por canal | `stop → npm run migrate → start`; no rolling deploy |
 | `Canal habilitado sin adaptador` al arrancar | `CHANNELS_ENABLED` incluye un canal no implementado | Corregir la lista o implementar el adaptador |
 | `Configuración de Meta/Telegram incompleta` | Faltan credenciales del canal habilitado | Completar `.env` |
 | Webhook Telegram `401` | Secret token distinto al registrado | Repetir `setWebhook` con el secret correcto |

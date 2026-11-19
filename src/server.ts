@@ -6,9 +6,13 @@ import { outboxDispatcher } from './services/outboxDispatcher.js';
 import { inboundDispatcher } from './services/inboundDispatcher.js';
 import { retentionService } from './services/retentionService.js';
 import { setShuttingDown } from './app.js';
+import { assertSchemaReady } from './database/schemaGuard.js';
 
 async function start(): Promise<void> {
   try {
+    // Fail-fast: no arrancar contra una base sin las migraciones/constraints requeridas.
+    await assertSchemaReady();
+
     const app = await buildApp();
 
     await app.listen({
