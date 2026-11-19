@@ -2,6 +2,7 @@ import Fastify, { FastifyInstance } from 'fastify';
 import cors from '@fastify/cors';
 import rawBodyPlugin from 'fastify-raw-body';
 import { handleVerifyWebhook, handleIncomingWebhook } from './controllers/webhookController.js';
+import { handleTelegramWebhook } from './controllers/telegramWebhookController.js';
 import { logger } from './utils/logger.js';
 import { db } from './providers/database/dbClient.js';
 import { inboundDispatcher } from './services/inboundDispatcher.js';
@@ -92,6 +93,10 @@ export async function buildApp(): Promise<FastifyInstance> {
     );
   } else {
     logger.info('Canal WhatsApp deshabilitado: rutas /webhook no registradas');
+  }
+
+  if (channelRegistry.isEnabled('telegram')) {
+    app.post('/webhook/telegram', handleTelegramWebhook);
   }
 
   return app;

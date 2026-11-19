@@ -31,7 +31,7 @@ export interface CoalescedEventBatch {
 export class InboundRepository {
   /**
    * Auditor 5B (I18): Persiste el evento entrante en inbound_events antes de emitir el ACK 200 a Meta.
-   * ON CONFLICT (wamid) DO NOTHING asegura idempotencia estricta por identificador oficial de mensaje.
+   * ON CONFLICT (channel, wamid) DO NOTHING asegura idempotencia estricta por canal e identificador externo de mensaje.
    */
   public async persistInboundEvent(
     params: {
@@ -48,7 +48,7 @@ export class InboundRepository {
         wamid, phone_number_id, sender_phone, payload, channel
       )
       VALUES ($1, $2, $3, $4, $5)
-      ON CONFLICT (wamid) DO NOTHING
+      ON CONFLICT (channel, wamid) DO NOTHING
       RETURNING *;
     `;
 
@@ -81,7 +81,8 @@ export class InboundRepository {
           AND i.next_retry_at <= clock_timestamp()
           AND NOT EXISTS (
             SELECT 1 FROM public.inbound_events older
-            WHERE older.phone_number_id = i.phone_number_id
+            WHERE older.channel = i.channel
+              AND older.phone_number_id = i.phone_number_id
               AND older.sender_phone = i.sender_phone
               AND older.id <> i.id
               AND (
@@ -136,7 +137,8 @@ export class InboundRepository {
           AND i.next_retry_at <= clock_timestamp()
           AND NOT EXISTS (
             SELECT 1 FROM public.inbound_events older
-            WHERE older.phone_number_id = i.phone_number_id
+            WHERE older.channel = i.channel
+              AND older.phone_number_id = i.phone_number_id
               AND older.sender_phone = i.sender_phone
               AND older.id <> i.id
               AND (
@@ -180,15 +182,17 @@ export class InboundRepository {
       const secondariesQuery = `
         SELECT id, payload, created_at
         FROM public.inbound_events
-        WHERE sender_phone = $1
-          AND phone_number_id = $2
+        WHERE channel = $1
+          AND sender_phone = $2
+          AND phone_number_id = $3
           AND status = 'PENDING'
           AND next_retry_at <= clock_timestamp()
-          AND (created_at > $3 OR (created_at = $3 AND id > $4))
+          AND (created_at > $4 OR (created_at = $4 AND id > $5))
         ORDER BY created_at ASC, id ASC;
       `;
 
       const secondariesRes = await executor.query(secondariesQuery, [
+        primary.channel,
         primary.sender_phone,
         primary.phone_number_id,
         primary.created_at,

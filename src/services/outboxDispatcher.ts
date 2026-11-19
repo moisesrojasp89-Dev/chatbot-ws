@@ -379,8 +379,12 @@ export class OutboxDispatcher {
       }
 
       // Fallo transitorio de red -> Reintento con backoff exponencial y fencing por lock_token
+      const providerDelay =
+        networkError instanceof ChannelSendError ? networkError.retryAfterSeconds : undefined;
       const backoffSeconds =
-        CONSTANTS.OUTBOX.BACKOFF_BASE_SECONDS * Math.pow(2, record.retry_count);
+        providerDelay && providerDelay > 0
+          ? providerDelay
+          : CONSTANTS.OUTBOX.BACKOFF_BASE_SECONDS * Math.pow(2, record.retry_count);
 
       if (record.retry_count + 1 >= record.max_retries) {
         logger.error(

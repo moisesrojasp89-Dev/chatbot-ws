@@ -22,6 +22,14 @@ const envSchema = z.object({
     z.string().min(6).optional()
   ),
   CHANNELS_ENABLED: z.string().default('whatsapp'),
+  TELEGRAM_BOT_TOKEN: z.preprocess(
+    (value) => (typeof value === 'string' && value.trim() === '' ? undefined : value),
+    z.string().min(10).optional()
+  ),
+  TELEGRAM_WEBHOOK_SECRET: z.preprocess(
+    (value) => (typeof value === 'string' && value.trim() === '' ? undefined : value),
+    z.string().min(6).optional()
+  ),
   // Proveedor LLM genérico (API compatible con Chat Completions de OpenAI).
   // Sin nombres de proveedor hardcodeados: todo se configura por entorno.
   LLM_API_KEY: z.string().min(10, 'LLM_API_KEY requerida para el proveedor LLM'),

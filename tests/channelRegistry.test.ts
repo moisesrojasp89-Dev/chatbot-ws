@@ -4,6 +4,7 @@ import { ChannelSendError, normalizeChannelName } from '../src/providers/channel
 import { metaChannelSender } from '../src/providers/channels/meta/metaChannelSender.js';
 import { MetaGraphApiError, whatsappClient } from '../src/providers/channels/meta/whatsappClient.js';
 import { outboxDispatcher } from '../src/services/outboxDispatcher.js';
+import { env } from '../src/config/env.js';
 import { outboxRepository } from '../src/repositories/outboxRepository.js';
 import { OutboxRecord } from '../src/types/states.js';
 
@@ -17,7 +18,7 @@ describe('Capa de canales: registro y traducción de errores', () => {
     expect(channelRegistry.get('whatsapp').channel).toBe('whatsapp');
 
     try {
-      channelRegistry.get('telegram');
+      channelRegistry.get('unregistered-channel');
       throw new Error('Se esperaba ChannelSendError para un canal no registrado');
     } catch (error) {
       expect(error).toBeInstanceOf(ChannelSendError);
@@ -128,5 +129,20 @@ describe('Capa de canales: registro y traducción de errores', () => {
       expect.stringContaining('Canal no registrado')
     );
     expect(send).not.toHaveBeenCalled();
+  });
+  it('valida un arranque solo-Telegram sin exigir credenciales de Meta', () => {
+    const previousChannels = env.CHANNELS_ENABLED;
+    const previousToken = env.TELEGRAM_BOT_TOKEN;
+    const previousSecret = env.TELEGRAM_WEBHOOK_SECRET;
+    try {
+      env.CHANNELS_ENABLED = 'telegram';
+      env.TELEGRAM_BOT_TOKEN = 'test_bot_token';
+      env.TELEGRAM_WEBHOOK_SECRET = 'test_webhook_secret';
+      expect(() => channelRegistry.validateEnabledChannels()).not.toThrow();
+    } finally {
+      env.CHANNELS_ENABLED = previousChannels;
+      env.TELEGRAM_BOT_TOKEN = previousToken;
+      env.TELEGRAM_WEBHOOK_SECRET = previousSecret;
+    }
   });
 });

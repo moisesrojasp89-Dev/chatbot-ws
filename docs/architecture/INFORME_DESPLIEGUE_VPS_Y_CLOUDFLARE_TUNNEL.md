@@ -140,7 +140,8 @@ La base de datos PostgreSQL se conecta a través del Transaction Pooler IPv4 de 
 * **Puerto:** `6543`
 * **Base de Datos:** `postgres`
 * **Historial de Migraciones:** Verificado y registrado en `public.migrations_history`.
-* **Migraciones Ejecutadas (14 de 14 aplicadas al 100%):**
+* **Plan de Migraciones (15 archivos; 015 pendiente de ventana de mantenimiento):**
+    > ⚠️ **Ventana de mantenimiento obligatoria (single-VPS systemd):** ejecutar en orden **stop del servicio → `npm run migrate` → start del servicio**. La migración `015_inbound_channel_identity.sql` elimina `UNIQUE(wamid)` y el código nuevo usa `ON CONFLICT (channel, wamid)`: ni el código viejo después de migrar ni el código nuevo antes de migrar funcionan (`42P10`).
   1. `001_initial_schema.sql` (Tablas maestras de chats, mensajes, contactos)
   2. `002_outbox_and_statuses.sql` (Patrón Transaccional Outbox)
   3. `003_outbox_resilience_locked_at.sql`
@@ -153,6 +154,9 @@ La base de datos PostgreSQL se conecta a través del Transaction Pooler IPv4 de 
   10. `010_revoke_anon_authenticated_permissions.sql` (Principio de menor privilegio)
   11. `011_inbound_performance_indexes.sql`
   12. `012_default_privileges_and_handoff_reasons.sql`
+  13. `013_security_hardening_and_hot_indexes.sql`
+  14. `014_multichannel_channel_columns.sql` (columna `channel` en inbound_events/outbox_messages)
+  15. `015_inbound_channel_identity.sql` (UNIQUE `(channel, wamid)`: requiere mantenimiento)
 
 ---
 

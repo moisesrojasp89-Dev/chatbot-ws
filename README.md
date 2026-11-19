@@ -5,12 +5,12 @@
 [![LLM](https://img.shields.io/badge/LLM-Provider_Agnostic-blueviolet.svg)](#-arquitectura-dual-daemon--harness-con-rigor-de-ingeniería)
 [![PostgreSQL](https://img.shields.io/badge/PostgreSQL-16-blue.svg)](https://www.postgresql.org/)
 [![Multichannel](https://img.shields.io/badge/Channels-Multichannel-25D366.svg)](#-canales-y-verticales)
-[![Tests](https://img.shields.io/badge/Tests-143%2F143_Passing-success.svg)](./tests)
+[![Tests](https://img.shields.io/badge/Tests-155%2F155_Passing-success.svg)](./tests)
 [![Quality Gate](https://img.shields.io/badge/Quality_Gate-Certified_100%25-success.svg)](#-quality-gate-y-certificación-institucional)
 
 Plataforma **omnicanal** de atención, ventas y automatización con IA para empresas de LATAM. Un solo núcleo conversacional —memoria, FSM, guardrails y herramientas de negocio— está diseñado para operar sobre **WhatsApp, Instagram, Telegram, TikTok o canales propios**, con motor LLM intercambiable y sin lock-in de proveedor.
 
-> **Canal productivo hoy:** WhatsApp Business Cloud API. El diseño separa ingesta, inferencia y despacho, de modo que nuevos canales se incorporan como adaptadores sobre el mismo motor conversacional; Telegram, Instagram DM, TikTok y webchat están en roadmap.
+> **Canales productivos hoy:** WhatsApp Business Cloud API y Telegram Bot API (texto). El diseño separa ingesta, inferencia y despacho, de modo que nuevos canales se incorporan como adaptadores sobre el mismo motor conversacional; Instagram DM, TikTok y webchat están en roadmap.
 
 ### 🎯 Valor diferencial
 
@@ -26,7 +26,7 @@ Plataforma **omnicanal** de atención, ventas y automatización con IA para empr
 | :--- | :---: | :--- |
 | WhatsApp Business Cloud API | ✅ Operativo | Webhook HMAC + Graph API + outbox transaccional |
 | Instagram DM | 🧭 Roadmap | Meta Graph API (requiere permisos de la app) |
-| Telegram | 🧭 Roadmap | Bot API |
+| Telegram | ✅ Operativo | Bot API (texto, webhook con secret token) |
 | TikTok | 🧭 Roadmap | API de mensajería (según disponibilidad regional) |
 | Webchat / API propia | 🧭 Roadmap | Adaptador HTTP sobre el mismo pipeline |
 
@@ -52,7 +52,7 @@ $$\text{Plataforma Omnicanal} = \text{Capa de Canales} + \text{Pipeline Inbound 
    * **Presupuesto ReAct & AbortSignal:** `deadlineMs` global de 24s distribuido entre turnos para nunca exceder el lease de 30s.
    * **Readiness Probe (`GET /ready`):** Monitoreo de salud operativa para orquestadores de contenedores (Kubernetes/Docker).
 4. **Seguridad y Privacidad LGPD / GDPR:**
-   * **Row Level Security (RLS):** Habilitado en todas las tablas sensibles del esquema `public` con revocación de privilegios para roles `anon` y `authenticated` (Migraciones 001 a 014).
+   * **Row Level Security (RLS):** Habilitado en todas las tablas sensibles del esquema `public` con revocación de privilegios para roles `anon` y `authenticated` (Migraciones 001 a 015).
    * **Sanitizador Recursivo de Logs:** Enmascaramiento automático de teléfonos E.164, tokens Bearer y API keys.
 5. **Harness Agéntico & Guardrails Multi-Nivel:**
    * Grounding Lock por código (mitigación de alucinaciones de precios).
@@ -85,14 +85,14 @@ Chatbot WS/
 ├── src/
 │   ├── config/                  # Constantes y variables de entorno validadas con Zod
 │   ├── controllers/             # Gateway Webhook Meta con HMAC SHA-256 y reconciliación de estados
-│   ├── database/                # Migraciones DDL SQL (001 a 014) y runner automatizado
+│   ├── database/                # Migraciones DDL SQL (001 a 015) y runner automatizado
 │   ├── harness/                 # Motor Agéntico, Context Manager, Tools y Guardrails
 │   ├── middleware/              # Rate Limiter Token Bucket por teléfono
 │   ├── providers/               # Clientes externos (PostgreSQL, proveedor LLM, adaptadores de canal)
 │   ├── repositories/            # Repositorios SQL (Inbound, Outbox, Contact, Conversation, Message, etc.)
 │   ├── services/                # Daemons asíncronos (InboundDispatcher, OutboxDispatcher, RetentionService)
 │   └── utils/                   # Circuit Breaker, crypto HMAC, logger estructurado con sanitizador PII
-└── tests/                       # Suite de 16 archivos de pruebas con Vitest (143/143 passing)
+└── tests/                       # Suite de 18 archivos de pruebas con Vitest (155/155 passing)
 ```
 
 ---
@@ -109,7 +109,7 @@ El script ejecuta 4 verificaciones deterministas:
 1. **Compilación TypeScript AST:** `tsc --noEmit` (0 errores, 0 advertencias, prohibido `any` indiscriminado).
 2. **Escaneo Zero-Trust:** Inspección exhaustiva contra tokens reales de Meta, API keys del proveedor LLM y credenciales en texto plano.
 3. **Integridad de Configuración & Harness:** Validación bidireccional entre `.env.example`, `.gitignore`, `src/config/env.ts` y `AGENTS.md`.
-4. **Suite Completa de Pruebas Unitarias/Integración:** `vitest run` ejecutando las 143 pruebas automatizadas al 100%.
+4. **Suite Completa de Pruebas Unitarias/Integración:** `vitest run` ejecutando las 155 pruebas automatizadas al 100%.
 
 ---
 
@@ -142,10 +142,13 @@ LLM_MODEL=nombre-del-modelo
 Canales habilitados por configuración (cada canal debe tener su adaptador registrado):
 ```dotenv
 CHANNELS_ENABLED=whatsapp
+# Opcional: agregar "telegram" y configurar el bot
+TELEGRAM_BOT_TOKEN=tu_token_de_telegram
+TELEGRAM_WEBHOOK_SECRET=tu_secret_token
 ```
 
 ### 4. Migraciones de Base de Datos
-Ejecuta las migraciones incrementales (001 a 014):
+Ejecuta las migraciones incrementales (001 a 015):
 ```bash
 npm run migrate
 ```
@@ -170,8 +173,8 @@ npm run quality-gate
 ## 🧪 Estado de la Suite de Pruebas
 
 ```bash
- Test Files  16 passed (16)
-      Tests  143 passed (143)
+ Test Files  18 passed (18)
+      Tests  155 passed (155)
    Coverage  Pipelines Inbound/Outbox, Circuit Breakers, Guardrails, Webhook HMAC, Multi-Tenant RLS
 ```
 

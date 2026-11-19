@@ -3,6 +3,8 @@ import { logger } from '../../utils/logger.js';
 import { ChannelSendError, ChannelSender, normalizeChannelName } from './channelTypes.js';
 import { getMetaConfig } from './meta/metaConfig.js';
 import { MetaChannelSender } from './meta/metaChannelSender.js';
+import { getTelegramConfig } from './telegram/telegramConfig.js';
+import { TelegramChannelSender } from './telegram/telegramChannelSender.js';
 
 /**
  * Registro de adaptadores de canal.
@@ -15,6 +17,7 @@ export class ChannelRegistry {
 
   constructor() {
     this.register(new MetaChannelSender());
+    this.register(new TelegramChannelSender());
   }
 
   public register(sender: ChannelSender): void {
@@ -65,6 +68,9 @@ export class ChannelRegistry {
     if (enabled.includes('whatsapp')) {
       // Falla temprano y con mensaje claro si faltan credenciales de Meta.
       getMetaConfig();
+    }
+    if (enabled.includes('telegram')) {
+      getTelegramConfig();
     }
 
     logger.info({ channels: enabled }, '📡 Canales habilitados y validados');

@@ -71,7 +71,7 @@
 - **Prohibido** ramificar con `if (channel === 'whatsapp')` dentro del harness o los servicios; se resuelve por polimorfismo/registro.
 - Un adaptador nuevo **no puede exigir cambios en el harness**; si los exige, el diseño del adaptador es incorrecto.
 
-> **Deuda técnica conocida (Ola 0 completada):** el **egress** ya usa `ChannelSender` y `OutboxDispatcher` no importa Meta. Queda pendiente para la Ola 1: el **ingress** Meta-específico (`/webhook`, `webhookController`, `types/meta`), la unicidad inbound `wamid` → `(channel, external_message_id)` y la coalescencia con predicado de canal. Ningún servicio nuevo puede importar Meta directamente. Mientras no exista un adaptador no-Meta registrado, `CHANNELS_ENABLED=telegram` falla en el arranque por diseño; el arranque sin credenciales de Meta llega con la Ola 1 (primer adaptador no-Meta).
+> **Deuda técnica conocida (Ola 0 completada):** el **egress** ya usa `ChannelSender` y `OutboxDispatcher` no importa Meta. La Ola 1 ya incorporó Telegram (ingress/egress) e identidad inbound `(channel, wamid)` con coalescencia por canal. Deuda restante: (a) los controllers de ingress aún no implementan el contrato `ChannelAdapter` unificado; (b) el nombre `wamid` se conserva como identificador externo genérico; (c) breaker y `pauseGlobal` siguen siendo globales, no por canal; (d) falta assert de esquema al arrancar y migración no concurrente; (e) Telegram MVP solo soporta texto. Ningún servicio nuevo puede importar Meta directamente.
 
 ---
 
@@ -104,7 +104,7 @@ Todo canal nuevo (Telegram, Instagram, TikTok, webchat, etc.) **DEBE** implement
 - Respetar ventana de servicio, plantillas y políticas de Meta; un rechazo de política es fallo terminal, no transitorio.
 - Tokens y App Secret exclusivamente por entorno.
 
-### 4.2 Telegram (al implementarse)
+### 4.2 Telegram (vigente, MVP texto)
 - Validar `X-Telegram-Bot-Api-Secret-Token` en cada webhook.
 - Deduplicar por `update_id`; responder al webhook con `200` inmediato tras persistir.
 - Respetar `429` y `retry_after` del proveedor; mapear a `TRANSIENT_RATE_LIMIT`.
