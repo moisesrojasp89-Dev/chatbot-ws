@@ -1,8 +1,7 @@
 import Fastify, { FastifyInstance } from 'fastify';
 import cors from '@fastify/cors';
 import rawBodyPlugin from 'fastify-raw-body';
-import { handleVerifyWebhook, handleIncomingWebhook } from './controllers/webhookController.js';
-import { handleTelegramWebhook } from './controllers/telegramWebhookController.js';
+import { handleChannelWebhook } from './controllers/channelWebhookController.js';
 import { logger } from './utils/logger.js';
 import { db } from './providers/database/dbClient.js';
 import { inboundDispatcher } from './services/inboundDispatcher.js';
@@ -78,25 +77,37 @@ export async function buildApp(): Promise<FastifyInstance> {
     };
   });
 
-  // 5. Rutas del adaptador Meta/WhatsApp (solo si el canal está habilitado)
-  if (channelRegistry.isEnabled('whatsapp')) {
-    app.get('/webhook', handleVerifyWebhook);
+  // 5. Rutas de webhook declaradas por cada adaptador habilitado.
+  const enabledChannels = channelRegistry.enabledChannels();
+
+  for (const channel of enabledChannels) {
+    const adapter = channelRegistry.getAdapter(channel);
+    const path = adapter.webhookPath ?? `/webhook/${channel}`;
+
+    if (adapter.verifyWebhookChallenge) {
+      app.get(path, (request, reply) => {
+        const result = adapter.verifyWebhookChallenge?.(request.query as Record<string, unknown>);
+        if (result?.ok) {
+          logger.info({ channel, path }, '✅ Challenge de webhook verificado');
+          reply.status(200).send(result.challenge ?? '');
+          return;
+        }
+        logger.warn({ channel, path }, '❌ Challenge de webhook rechazado');
+        reply.status(403).send({ error: 'Forbidden. Invalid verification token.' });
+      });
+    }
 
     app.post(
-      '/webhook',
+      path,
       {
         config: {
-          rawBody: true, // Habilita la captura del rawBody para validación HMAC SHA-256
+          rawBody: adapter.rawBody ?? false,
         },
       },
-      handleIncomingWebhook
+      (request, reply) => handleChannelWebhook(channel, request, reply)
     );
-  } else {
-    logger.info('Canal WhatsApp deshabilitado: rutas /webhook no registradas');
-  }
 
-  if (channelRegistry.isEnabled('telegram')) {
-    app.post('/webhook/telegram', handleTelegramWebhook);
+    logger.info({ channel, path }, '📡 Webhook de canal registrado');
   }
 
   return app;

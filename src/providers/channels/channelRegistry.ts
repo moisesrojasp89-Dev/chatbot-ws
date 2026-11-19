@@ -1,6 +1,6 @@
 import { env } from '../../config/env.js';
 import { logger } from '../../utils/logger.js';
-import { ChannelSendError, ChannelSender, normalizeChannelName } from './channelTypes.js';
+import { ChannelAdapter, ChannelSendError, normalizeChannelName } from './channelTypes.js';
 import { getMetaConfig } from './meta/metaConfig.js';
 import { MetaChannelSender } from './meta/metaChannelSender.js';
 import { getTelegramConfig } from './telegram/telegramConfig.js';
@@ -9,31 +9,36 @@ import { TelegramChannelSender } from './telegram/telegramChannelSender.js';
 /**
  * Registro de adaptadores de canal.
  *
- * El núcleo resuelve el emisor por nombre de canal; no conoce SDKs ni detalles
- * del proveedor. Para agregar un canal: implementar ChannelSender y registrarlo.
+ * El núcleo resuelve el adaptador por nombre de canal y solo conoce el contrato
+ * `ChannelAdapter` (verify/parse + egress). No hay SDKs ni detalles de proveedor
+ * en el núcleo. Para agregar un canal: implementar ChannelAdapter y registrarlo.
  */
 export class ChannelRegistry {
-  private readonly senders = new Map<string, ChannelSender>();
+  private readonly adapters = new Map<string, ChannelAdapter>();
 
   constructor() {
     this.register(new MetaChannelSender());
     this.register(new TelegramChannelSender());
   }
 
-  public register(sender: ChannelSender): void {
-    this.senders.set(normalizeChannelName(sender.channel), sender);
+  public register(adapter: ChannelAdapter): void {
+    this.adapters.set(normalizeChannelName(adapter.channel), adapter);
   }
 
   public has(channel: string): boolean {
-    return this.senders.has(normalizeChannelName(channel));
+    return this.adapters.has(normalizeChannelName(channel));
   }
 
-  public get(channel: string): ChannelSender {
-    const sender = this.senders.get(normalizeChannelName(channel));
-    if (!sender) {
+  public get(channel: string): ChannelAdapter {
+    const adapter = this.adapters.get(normalizeChannelName(channel));
+    if (!adapter) {
       throw new ChannelSendError('FATAL', `Canal no registrado: ${channel}`);
     }
-    return sender;
+    return adapter;
+  }
+
+  public getAdapter(channel: string): ChannelAdapter {
+    return this.get(channel);
   }
 
   /** Canales habilitados por configuración (CSV en CHANNELS_ENABLED). */
@@ -41,7 +46,8 @@ export class ChannelRegistry {
     return (env.CHANNELS_ENABLED ?? 'whatsapp')
       .split(',')
       .map((channel) => channel.trim().toLowerCase())
-      .filter((channel) => channel.length > 0);
+      .filter((channel) => channel.length > 0)
+      .filter((channel, index, all) => all.indexOf(channel) === index);
   }
 
   public isEnabled(channel: string): boolean {
@@ -50,8 +56,7 @@ export class ChannelRegistry {
 
   /**
    * Valida al arranque que todo canal habilitado tenga adaptador y configuración.
-   * La ausencia de META_* solo es válida si `whatsapp` no está habilitado y existe
-   * otro adaptador registrado (p. ej. Telegram, que se implementa en la Ola 1).
+   * La ausencia de META_* solo es válida si `whatsapp` no está habilitado.
    */
   public validateEnabledChannels(): void {
     const enabled = this.enabledChannels();
@@ -60,7 +65,7 @@ export class ChannelRegistry {
     }
 
     for (const channel of enabled) {
-      if (!this.senders.has(channel)) {
+      if (!this.adapters.has(channel)) {
         throw new Error(`Canal habilitado sin adaptador registrado: ${channel}`);
       }
     }

@@ -69,6 +69,12 @@ function mapTelegramError(
 
 export class TelegramChannelSender implements ChannelAdapter {
   public readonly channel = 'telegram';
+  public readonly webhookPath = '/webhook/telegram';
+  public readonly rawBody = false;
+
+  public rateLimitKey(senderId: string): string {
+    return `telegram:${senderId}`;
+  }
 
   public verifyInbound(request: unknown): boolean {
     const { webhookSecret } = getTelegramConfig();

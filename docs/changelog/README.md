@@ -1,6 +1,8 @@
 # 📜 Matriz Cronológica de Hitos y Fases — Chatbot WS
 
 > **Propósito:** Trazabilidad modular de la evolución del proyecto desglosada por fases arquitectónicas y dominios técnicos especializados.
+>
+> 📜 **Bitácora cronológica única (desde Ola 0):** [`docs/BITACORA.md`](file:///c:/Users/indatech/Desktop/Chatbot%20WS/docs/BITACORA.md).
 
 ---
 

@@ -1,3 +1,4 @@
+import crypto from 'node:crypto';
 import {
   ChannelAdapter,
   ChannelSendError,
@@ -58,6 +59,27 @@ function mapMetaError(error: unknown): ChannelSendError {
 
 export class MetaChannelSender implements ChannelAdapter {
   public readonly channel = 'whatsapp';
+  public readonly webhookPath = '/webhook';
+  public readonly rawBody = true;
+
+  public verifyWebhookChallenge(query: Record<string, unknown>): { ok: boolean; challenge?: string } {
+    const mode = query['hub.mode'];
+    const token = query['hub.verify_token'];
+    const challenge = query['hub.challenge'];
+
+    if (typeof token !== 'string') return { ok: false };
+
+    const expected = getMetaConfig().verifyToken;
+    const valid = crypto.timingSafeEqual(
+      crypto.createHash('sha256').update(token).digest(),
+      crypto.createHash('sha256').update(expected).digest()
+    );
+
+    if (mode === 'subscribe' && valid) {
+      return { ok: true, challenge: typeof challenge === 'string' ? challenge : '' };
+    }
+    return { ok: false };
+  }
 
   public verifyInbound(request: unknown): boolean {
     const { rawBody, signature } = (request ?? {}) as {

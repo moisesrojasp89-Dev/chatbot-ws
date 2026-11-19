@@ -5,7 +5,7 @@
 [![LLM](https://img.shields.io/badge/LLM-Provider_Agnostic-blueviolet.svg)](#-arquitectura-dual-daemon--harness-con-rigor-de-ingeniería)
 [![PostgreSQL](https://img.shields.io/badge/PostgreSQL-16-blue.svg)](https://www.postgresql.org/)
 [![Multichannel](https://img.shields.io/badge/Channels-Multichannel-25D366.svg)](#-canales-y-verticales)
-[![Tests](https://img.shields.io/badge/Tests-172%2F172_Passing-success.svg)](./tests)
+[![Tests](https://img.shields.io/badge/Tests-179%2F179_Passing-success.svg)](./tests)
 [![Quality Gate](https://img.shields.io/badge/Quality_Gate-Certified_100%25-success.svg)](#-quality-gate-y-certificación-institucional)
 
 Plataforma **omnicanal** de atención, ventas y automatización con IA para empresas de LATAM. Un solo núcleo conversacional —memoria, FSM, guardrails y herramientas de negocio— está diseñado para operar sobre **WhatsApp, Instagram, Telegram, TikTok o canales propios**, con motor LLM intercambiable y sin lock-in de proveedor.
@@ -70,7 +70,7 @@ El repositorio adopta el estándar institucional de modularización y arnés de 
 Chatbot WS/
 ├── AGENTS.md                    # Mandato institucional para Antigravity, Claude, Cursor y agentes IA
 ├── docs/                        # Documentación técnica modularizada por dominio
-│   ├── INDEX.md                 # Mapa de navegación central y taxonomía documental
+│   ├── INDEX.md                 # Mapa de navegación central y taxonomía documental`n│   ├── BITACORA.md              # Bitácora cronológica: cambios, decisiones, evidencia y deuda
 │   ├── architecture/            # Diseños de arquitectura técnica, multitenancy y despliegue
 │   ├── standards_and_harness/   # Estándares de ingeniería y catálogo de errores con auto-aprendizaje
 │   │   └── self_learning_error_catalog.md # Catálogo 5-Whys y tripwires de regresión (ERR-001 a ERR-008)
@@ -92,7 +92,7 @@ Chatbot WS/
 │   ├── repositories/            # Repositorios SQL (Inbound, Outbox, Contact, Conversation, Message, etc.)
 │   ├── services/                # Daemons asíncronos (InboundDispatcher, OutboxDispatcher, RetentionService)
 │   └── utils/                   # Circuit Breaker, crypto HMAC, logger estructurado con sanitizador PII
-└── tests/                       # Suite de 20 archivos de pruebas con Vitest (172/172 passing)
+└── tests/                       # Suite de 22 archivos de pruebas con Vitest (179/179 passing)
 ```
 
 ---
@@ -109,7 +109,7 @@ El script ejecuta 4 verificaciones deterministas:
 1. **Compilación TypeScript AST:** `tsc --noEmit` (0 errores, 0 advertencias, prohibido `any` indiscriminado).
 2. **Escaneo Zero-Trust:** Inspección exhaustiva contra tokens reales de Meta, API keys del proveedor LLM y credenciales en texto plano.
 3. **Integridad de Configuración & Harness:** Validación bidireccional entre `.env.example`, `.gitignore`, `src/config/env.ts` y `AGENTS.md`.
-4. **Suite Completa de Pruebas Unitarias/Integración:** `vitest run` ejecutando las 172 pruebas automatizadas al 100%.
+4. **Suite Completa de Pruebas Unitarias/Integración:** `vitest run` ejecutando las 179 pruebas automatizadas al 100%.
 
 ---
 
@@ -148,6 +148,8 @@ TELEGRAM_WEBHOOK_SECRET=tu_secret_token
 ```
 
 > 📘 Guía operativa completa de arranque y despliegue: [**`RUNBOOK_ARRANQUE_Y_DESPLIEGUE.md`**](docs/architecture/RUNBOOK_ARRANQUE_Y_DESPLIEGUE.md)
+>
+> 📜 Bitácora cronológica de cambios y decisiones: [**BITACORA.md**](docs/BITACORA.md)
 
 ### 4. Migraciones de Base de Datos
 Ejecuta las migraciones incrementales (001 a 016):
@@ -175,8 +177,8 @@ npm run quality-gate
 ## 🧪 Estado de la Suite de Pruebas
 
 ```bash
- Test Files  20 passed (20)
-      Tests  172 passed (172)
+ Test Files  22 passed (22)
+      Tests  179 passed (179)
    Coverage  Pipelines Inbound/Outbox, Circuit Breakers, Guardrails, Webhook HMAC, Multi-Tenant RLS
 ```
 

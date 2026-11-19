@@ -71,7 +71,7 @@
 - **Prohibido** ramificar con `if (channel === 'whatsapp')` dentro del harness o los servicios; se resuelve por polimorfismo/registro.
 - Un adaptador nuevo **no puede exigir cambios en el harness**; si los exige, el diseño del adaptador es incorrecto.
 
-> **Deuda técnica conocida (Ola 0 completada):** el **egress** ya usa `ChannelSender` y `OutboxDispatcher` no importa Meta. La Ola 1 ya incorporó Telegram (ingress/egress), identidad inbound `(channel, wamid)` con coalescencia por canal, breaker/pausa aislados por canal y claim filtrado por canales sanos. El ingress ya implementa `ChannelAdapter` (verify/parse) para Meta y Telegram y el dispatcher consume el sobre normalizado. Deuda restante: (a) el nombre `wamid` se conserva como identificador externo genérico; (b) falta estrategia de migración no concurrente para tablas calientes; (c) Telegram MVP solo soporta texto; (d) no hay test de `buildApp()` solo-Telegram ni de no-leak de token. Ningún servicio nuevo puede importar Meta directamente.
+> **Deuda técnica conocida (Ola 0 completada):** el **egress** ya usa `ChannelSender` y `OutboxDispatcher` no importa Meta. La Ola 1 ya incorporó Telegram (ingress/egress), identidad inbound `(channel, wamid)` con coalescencia por canal, breaker/pausa aislados por canal y claim filtrado por canales sanos. El ingress implementa `ChannelAdapter` (verify/parse + `webhookPath`/`rawBody`), el router se registra desde el adaptador y el ingestor común persiste/ratelimita/reconcilia statuses. Deuda restante: (a) el nombre `wamid` se conserva como identificador externo genérico; (b) falta estrategia de migración no concurrente para tablas calientes; (c) Telegram MVP solo soporta texto; (d) faltan alertas de backlog por canal pausado. Ningún servicio nuevo puede importar Meta directamente.
 
 ---
 
@@ -82,9 +82,9 @@ Todo canal nuevo (Telegram, Instagram, TikTok, webchat, etc.) **DEBE** implement
 1. **`verifyInbound(request)`** — autenticidad criptográfica o token del proveedor; rechazo explícito con código HTTP correcto.
 2. **`parseInbound(payload)`** — traducción al sobre normalizado:
    - `channel`, `external_message_id`, `external_account_id`, `sender_id`, `occurred_at`, `type`, `text`/media, referencia al payload crudo.
-3. **`persistInbound(normalized, raw)`** — persistencia durable **antes** del ACK, con unicidad `(channel, external_message_id)`.
-4. **`sendOutbound(message)`** — envío idempotente por `(channel, outbox_id | external_message_id)`, con mapeo de errores del proveedor a la taxonomía común: `TRANSIENT_RATE_LIMIT`, `DAILY_QUOTA_EXHAUSTED`, `AUTH_OR_CONFIG_ERROR`, `FATAL_PAYLOAD_ERROR`, `NETWORK_OR_TIMEOUT`.
-5. **`mapStatus(event)`** — traducción de `sent`/`delivered`/`read`/`failed` cuando el canal los exponga, con reconciliación monótona y piso mínimo.
+3. **Persistencia durable antes del ACK** — el adaptador entrega el sobre normalizado y el ingestor común (`inboundIngestor`) persiste con unicidad `(channel, external_message_id)`, rate limit y auditoría C5. El adaptador no toca la base.
+4. **`sendOutbound(message)`** — envío idempotente por `(channel, outbox_id | external_message_id)`, con mapeo de errores del proveedor a la taxonomía común implementada: `SYSTEMIC_AUTH`, `RATE_LIMIT`, `TRANSIENT`, `FATAL`, `NETWORK`. El controller traduce la autenticidad a 401/503 y los fallos de persistencia a 500.
+5. **`parseInbound` devuelve `statuses` normalizados** — `sent`/`delivered`/`read`/`failed`; el ingestor aplica reconciliación monótona y piso mínimo.
 6. **Declaración de límites** — ventana de ACK, rate limits, tamaño máximo de payload, tipos de mensaje soportados y requisitos de aprobación del proveedor.
 7. **Pruebas de conformidad** — firma inválida rechazada, duplicado sin reejecución, ACK tras persistencia, fallo de envío reintentable, aislamiento multi-tenant y mapeo de estados.
 

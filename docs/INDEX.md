@@ -4,6 +4,10 @@ Bienvenido al centro de documentación técnica y gobernanza del ecosistema **Ch
 
 La documentación está organizada bajo el estándar de **Modularización Jerárquica** de grado institucional para prevenir la saturación de contexto y garantizar trazabilidad técnica exacta.
 
+## 📜 Bitácora Cronológica
+
+[**`BITACORA.md`**](file:///c:/Users/indatech/Desktop/Chatbot%20WS/docs/BITACORA.md) — cambios, decisiones, evidencia de tests y deuda aceptada por commit. **Empieza aquí** para saber qué se hizo y por qué.
+
 ---
 
 ## 🏛️ 1. Dominio de Arquitectura & Especificaciones Técnicas

@@ -102,4 +102,12 @@ export interface ParsedInbound {
 export interface ChannelAdapter extends ChannelSender {
   verifyInbound(request: unknown): boolean | Promise<boolean>;
   parseInbound(payload: unknown): ParsedInbound;
+  /** Clave de rate limit por remitente; por defecto el propio senderId. */
+  rateLimitKey?(senderId: string): string;
+  /** Ruta HTTP del webhook; por defecto `/webhook/<channel>`. */
+  webhookPath?: string;
+  /** true si el canal requiere el cuerpo crudo (p. ej. HMAC de Meta). */
+  rawBody?: boolean;
+  /** Verificación GET de challenge (webhooks tipo Meta). */
+  verifyWebhookChallenge?(query: Record<string, unknown>): { ok: boolean; challenge?: string };
 }
