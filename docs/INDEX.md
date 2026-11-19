@@ -11,7 +11,7 @@ La documentación está organizada bajo el estándar de **Modularización Jerár
 
 | Documento | Descripción / Alcance | Nivel |
 | :--- | :--- | :---: |
-| [**`TDD_ARQUITECTURA_TECNICA_DETALLADA.md`**](file:///c:/Users/indatech/Desktop/Chatbot%20WS/docs/architecture/TDD_ARQUITECTURA_TECNICA_DETALLADA.md) | Technical Design Document normativo v2.0: C4 N1/N2, DDL PostgreSQL, FSM, Gemini Tools, Human Handoff. | L2 - Núcleo |
+| [**`TDD_ARQUITECTURA_TECNICA_DETALLADA.md`**](file:///c:/Users/indatech/Desktop/Chatbot%20WS/docs/architecture/TDD_ARQUITECTURA_TECNICA_DETALLADA.md) | Technical Design Document normativo v2.0: C4 N1/N2, DDL PostgreSQL, FSM, tools del LLM, Human Handoff. | L2 - Núcleo |
 | [**`ARQUITECTURA_MULTITENANT_Y_ESCALABILIDAD.md`**](file:///c:/Users/indatech/Desktop/Chatbot%20WS/docs/architecture/ARQUITECTURA_MULTITENANT_Y_ESCALABILIDAD.md) | Aislamiento multi-tenant, Row-Level Security (RLS) en PostgreSQL, escalabilidad horizontal y pooling. | L3 - Avanzado |
 | [**`GUIA_OMNICANAL_Y_DEALERS_AUTOMOTRICES.md`**](file:///c:/Users/indatech/Desktop/Chatbot%20WS/docs/architecture/GUIA_OMNICANAL_Y_DEALERS_AUTOMOTRICES.md) | Flujos especializados para concesionarios automotrices (cotización, test drive, catálogo). | L2 - Industria |
 | [**`GUIA_ARQUITECTURA_Y_BUENAS_PRACTICAS.md`**](file:///c:/Users/indatech/Desktop/Chatbot%20WS/docs/architecture/GUIA_ARQUITECTURA_Y_BUENAS_PRACTICAS.md) | Manifiesto de desarrollo asistido por IA, prevención de los 10 anti-patrones en LLMs y checklist pre-producción. | L1 - Fundacional |
@@ -41,7 +41,7 @@ La documentación está organizada bajo el estándar de **Modularización Jerár
 | Documento | Dominio Técnico Especializado | Fases Cubiertas |
 | :--- | :--- | :---: |
 | [**`webhook_and_meta.md`**](file:///c:/Users/indatech/Desktop/Chatbot%20WS/docs/changelog/webhook_and_meta.md) | Ingesta de webhooks, verificación HMAC, deduplicación atómica, Outbox y Status Updates. | Fases 1 y 4 |
-| [**`llm_and_conversations.md`**](file:///c:/Users/indatech/Desktop/Chatbot%20WS/docs/changelog/llm_and_conversations.md) | Motor agéntico, Google Gemini, Guardrails N1-N4, FSM, Rate Limiter Dual y Coalescencia. | Fases 3 y 5C |
+| [**`llm_and_conversations.md`**](file:///c:/Users/indatech/Desktop/Chatbot%20WS/docs/changelog/llm_and_conversations.md) | Motor agéntico, proveedor LLM, Guardrails N1-N4, FSM, Rate Limiter Dual y Coalescencia. | Fases 3 y 5C |
 | [**`database_and_multi_tenant.md`**](file:///c:/Users/indatech/Desktop/Chatbot%20WS/docs/changelog/database_and_multi_tenant.md) | Esquemas PostgreSQL, RLS multi-tenant, Inbound Durable, SKIP LOCKED y purga LGPD. | Fases 2, 5B y 5C |
 | [**`infra_and_deploy.md`**](file:///c:/Users/indatech/Desktop/Chatbot%20WS/docs/changelog/infra_and_deploy.md) | Servidor Fastify, Systemd, <VPS_PROVIDER> VPS, Cloudflare Tunnel y Observabilidad (Pino). | Fases 1, 5A y Ops |
 

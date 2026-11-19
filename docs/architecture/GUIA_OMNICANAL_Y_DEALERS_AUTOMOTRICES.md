@@ -18,12 +18,12 @@ La respuesta es: **Funciona en todos los canales con un solo cerebro unificado.*
        ├──► [Instagram Direct (DMs)]  ──┼──► [CEREBRO UNIFICADO DE IA] ──► [Base de Datos]
        ├──► [Facebook Messenger]     ──┤      • Catálogo de Productos         • Historial
        └──► [TikTok Direct Messages]  ──┘      • Precios y Reglas              • Leads
-                                               • Gemini 2.5 Flash + Guardrails
+                                               • Proveedor LLM + Guardrails
 ```
 
 ### 1. ¿Cómo funciona la arquitectura de un solo "cerebro"?
 * El sistema que construimos no ata la lógica al canal.
-* El motor de Inteligencia Artificial (Gemini 2.5 Flash), las reglas de negocio, los filtros de seguridad y el catálogo de productos están centralizados.
+* El motor de Inteligencia Artificial (proveedor LLM configurable), las reglas de negocio, los filtros de seguridad y el catálogo de productos están centralizados.
 * **No importa si el cliente escribe por WhatsApp, por un DM de Instagram o por TikTok:** la IA consulta la misma base de datos y responde con la misma precisión en menos de 2 segundos.
 
 ### 2. Instagram Direct Messages & Facebook Messenger 🟢 *(Ecosistema Meta)*

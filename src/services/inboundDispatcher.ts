@@ -15,7 +15,7 @@ import {
   isTransientLlmError,
   classifyLlmError,
   extractLlmRetryDelaySeconds,
-} from '../providers/llm/geminiClient.js';
+} from '../providers/llm/llmClient.js';
 import { CircuitBreaker, CircuitOpenError } from '../utils/circuitBreaker.js';
 import { CONSTANTS } from '../config/constants.js';
 import { logger } from '../utils/logger.js';
@@ -122,7 +122,7 @@ export class InboundDispatcher {
     logger.info('🛑 Deteniendo Inbound Dispatcher Daemon limpiamente...');
     this.isStopping = true;
     this.isRunning = false;
-    this.shutdownAbortController.abort(); // Cancelar llamadas HTTP a Gemini en vuelo inmediatamente
+    this.shutdownAbortController.abort(); // Cancelar llamadas HTTP al proveedor LLM en vuelo inmediatamente
 
     if (this.pollTimer) {
       clearInterval(this.pollTimer);
@@ -482,7 +482,7 @@ export class InboundDispatcher {
         if (errorType === 'AUTH_OR_CONFIG_ERROR') {
           logger.fatal(
             { alert: 'LLM_AUTH_OR_CONFIG_ERROR', eventId: primaryEvent.id, err: llmError.message },
-            '🚨 ALERTA CRÍTICA: Error de credenciales o configuración en Gemini API. Pausando dispatcher sin quemar eventos.'
+            '🚨 ALERTA CRÍTICA: Error de credenciales o configuración del proveedor LLM. Pausando dispatcher sin quemar eventos.'
           );
           this.pause(300000);
           if (lockToken) {
@@ -494,7 +494,7 @@ export class InboundDispatcher {
         if (errorType === 'DAILY_QUOTA_EXHAUSTED') {
           logger.fatal(
             { alert: 'LLM_QUOTA_EXHAUSTED', eventId: primaryEvent.id, err: llmError.message },
-            '🚨 ALERTA CRÍTICA: Cuota diaria de Gemini agotada (RESOURCE_EXHAUSTED). Disparando breaker con pausa prolongada.'
+            '🚨 ALERTA CRÍTICA: Cuota diaria del proveedor LLM agotada. Disparando breaker con pausa prolongada.'
           );
           this.llmBreaker.trip(600000);
           if (lockToken) {

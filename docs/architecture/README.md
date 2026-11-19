@@ -24,7 +24,7 @@ flowchart LR
     Meta["Meta Cloud API (WhatsApp)"] <-->|"Webhook POST / HMAC SHA-256"| Fastify["Fastify 4 Gateway (<500ms ACK)"]
     Fastify -->|"SKIP LOCKED Queue"| Postgres[("PostgreSQL 16 Multi-Tenant (RLS)")]
     Postgres <-->|"Sliding Worker Pool"| InboundWorker["Inbound Dispatcher"]
-    InboundWorker <-->|"Token Budgeting & Tools"| Gemini["Google Gemini 2.5 Flash"]
+    InboundWorker <-->|"Token Budgeting & Tools"| LLM["Proveedor LLM (API compatible OpenAI)"]
     InboundWorker -->|"Outbox Pattern"| OutboxWorker["Outbox Dispatcher"]
     OutboxWorker -->|"Circuit Breaker & Backoff"| MetaOut["Meta Graph API (/messages)"]
 ```

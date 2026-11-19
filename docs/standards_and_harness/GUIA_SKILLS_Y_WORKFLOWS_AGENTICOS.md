@@ -51,7 +51,7 @@ flowchart LR
 | **1. DEFINE** | `/spec` | *Especificación antes que código:* Comprender el contrato, la máquina de estados y las tarifas antes de editar. | Esquema Zod tipado, migración SQL o contrato de interfaz documentado. |
 | **2. PLAN** | `/plan` | *Tareas atómicas y rebanadas verticales:* Dividir el trabajo en pasos independientes y verificables. | Plan ordenado con dependencias explícitas, mitigación de fallos y rollback. |
 | **3. BUILD** | `/build` | *Construcción incremental con Red-Green-Refactor:* Implementar una sola función o módulo a la vez. | Código modular con tipado TypeScript estricto (0 `any`, 0 dependencias circulares). |
-| **4. VERIFY** | `/test` | *Las pruebas son la única prueba:* Demostrar el comportamiento con mocks deterministas. | Tests unitarios pasando al 100% con cero llamadas reales a Meta o Gemini. |
+| **4. VERIFY** | `/test` | *Las pruebas son la única prueba:* Demostrar el comportamiento con mocks deterministas. | Tests unitarios pasando al 100% con cero llamadas reales a Meta o al proveedor LLM. |
 | **5. REVIEW** | `/review` | *Revisión multi-eje:* Auditar correctitud, arquitectura, seguridad y rendimiento. | Ausencia de secretos, RLS activo, latencia webhook `<1.5s`, cero `any`. |
 | **6. SHIP** | `/ship` | *Despliegue seguro:* La compuerta automatizada es ley absoluta. | `npm run quality-gate` retorna código `0` (4/4 Verificaciones Superadas). |
 
@@ -66,7 +66,7 @@ Los modelos de IA y desarrolladores apresurados intentan constantemente justific
 | *"El cambio es minúsculo (solo una línea o condición en el webhook), no requiere test."* | Un error en el webhook provoca bucles de reintentos masivos de Meta (20s timeout) y baneo del número. | Escribir un test unitario en Vitest con mock del payload de Meta o ejecutar la suite completa. |
 | *"Dejaré que el LLM calcule la tarifa o el descuento dinámicamente en el prompt."* | Violación crítica del Grounding Lock (`AGENTS.md`). El LLM alucinará precios y regalará servicios. | Consultar la tarifa determinista en la base de datos SQL (`mobility_fare_matrix`) o función de pricing. |
 | *"Pondré un `try/catch` vacío para que el servidor no se caiga si falla una API externa."* | Oculta fallos silenciosos, envenena la cola outbox y viola el principio de auto-aprendizaje. | Clasificar el error, registrarlo con Pino, activar fallback estructurado y documentar en `self_learning_error_catalog.md`. |
-| *"Haré peticiones reales a Meta Graph API o a Gemini en los tests para probar que responde."* | Viola el Mandamiento D. Las pruebas deben ejecutarse offline de forma ágil y determinista. | Interceptar todas las llamadas de red con mocks deterministas (`vi.fn()`, `mockResolvedValue`). |
+| *"Haré peticiones reales a Meta Graph API o al proveedor LLM en los tests para probar que responde."* | Viola el Mandamiento D. Las pruebas deben ejecutarse offline de forma ágil y determinista. | Interceptar todas las llamadas de red con mocks deterministas (`vi.fn()`, `mockResolvedValue`). |
 | *"Usaré `any` temporalmente en TypeScript porque el payload de WhatsApp es muy complejo."* | Viola el Mandamiento E. El uso de `any` destruye la seguridad en tiempo de compilación. | Modelar el payload con esquemas de `zod` (`z.infer<typeof WebhookPayloadSchema>`). |
 | *"El usuario tiene prisa, así que concluiré la tarea sin correr el Quality Gate."* | Violación de la compuerta obligatoria. La tarea **NO está terminada** sin verificación física. | Ejecutar `npm run quality-gate` y verificar 100% de verificaciones superadas. |
 | *"Importaré LangChain o CrewAI para orquestar el flujo conversacional."* | Viola la Doctrina de las Dos Ausencias (arXiv:2609.00006). Cero frameworks agénticos externos. | Implementar el bucle en primitivas nativas de Node/Fastify con tipado Zod. |
@@ -81,7 +81,7 @@ Los modelos de IA y desarrolladores apresurados intentan constantemente justific
 * **Proceso:**
   1. Definir el esquema Zod de entrada y salida con tipos explícitos y mensajes de error claros.
   2. Diseñar la migración SQL (`migrations/`) asegurando claves foráneas, índices y políticas RLS.
-  3. Establecer el comportamiento en estado degradado (*fail-closed*: qué responder si Gemini cae o Meta rechaza el mensaje).
+  3. Establecer el comportamiento en estado degradado (*fail-closed*: qué responder si el proveedor LLM cae o Meta rechaza el mensaje).
   4. Redactar la especificación en `docs/` antes de alterar archivos fuente.
 * **Criterio de Salida:** Contrato Zod y prueba de esquema TypeScript compilando sin errores (`tsc --noEmit`).
 

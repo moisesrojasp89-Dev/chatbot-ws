@@ -2,7 +2,7 @@
 
 [![TypeScript](https://img.shields.io/badge/TypeScript-5.6-blue.svg)](https://www.typescriptlang.org/)
 [![Fastify](https://img.shields.io/badge/Fastify-4.28-black.svg)](https://fastify.dev/)
-[![Gemini 2.5 Flash](https://img.shields.io/badge/Google_GenAI-Gemini_2.5_Flash-orange.svg)](https://ai.google.dev/)
+[![LLM](https://img.shields.io/badge/LLM-Provider_Agnostic-blueviolet.svg)](#-arquitectura-dual-daemon--harness-con-rigor-de-ingeniería)
 [![PostgreSQL](https://img.shields.io/badge/PostgreSQL-16-blue.svg)](https://www.postgresql.org/)
 [![Tests](https://img.shields.io/badge/Tests-132%2F132_Passing-success.svg)](./tests)
 [![Quality Gate](https://img.shields.io/badge/Quality_Gate-Certified_100%25-success.svg)](#-quality-gate-y-certificación-institucional)
@@ -26,7 +26,7 @@ $$\text{Chatbot Empresarial} = \text{Pipeline Inbound Durable} + \text{Motor LLM
    * Despacho controlado a Meta Graph API mediante `OutboxDispatcher` con **Head-of-Line Claiming** por `recipient_phone`.
    * **Reconciliación Monótona de Estados:** Procesamiento de eventos `sent` $\rightarrow$ `delivered` $\rightarrow$ `read` con cota mínima (`floor 'sent'`) tolerando llegadas de webhooks desordenadas.
 3. **Resiliencia & Tolerancia a Fallos:**
-   * **Circuit Breakers Tri-State:** Aislamiento granular contra caídas de Meta Graph API y cuotas de Gemini (`RESOURCE_EXHAUSTED` con pausa automática).
+   * **Circuit Breakers Tri-State:** Aislamiento granular contra caídas de Meta Graph API y cuotas del proveedor LLM (429 / `RESOURCE_EXHAUSTED` con pausa automática).
    * **Reaper Daemons con Poison Pill Protection:** Rescate de eventos colgados con transición automática a `FAILED` y mensaje de fallback institucional tras 3 reintentos.
    * **Presupuesto ReAct & AbortSignal:** `deadlineMs` global de 24s distribuido entre turnos para nunca exceder el lease de 30s.
    * **Readiness Probe (`GET /ready`):** Monitoreo de salud operativa para orquestadores de contenedores (Kubernetes/Docker).
@@ -48,7 +48,6 @@ El repositorio adopta el estándar institucional de modularización y arnés de 
 ```text
 Chatbot WS/
 ├── AGENTS.md                    # Mandato institucional para Antigravity, Claude, Cursor y agentes IA
-├── GEMINI.md                    # Espejo de directivas operativas institucionales
 ├── docs/                        # Documentación técnica modularizada por dominio
 │   ├── INDEX.md                 # Mapa de navegación central y taxonomía documental
 │   ├── architecture/            # Diseños de arquitectura técnica, multitenancy y despliegue
@@ -68,11 +67,11 @@ Chatbot WS/
 │   ├── database/                # Migraciones DDL SQL (001 a 013) y runner automatizado
 │   ├── harness/                 # Motor Agéntico, Context Manager, Tools y Guardrails
 │   ├── middleware/              # Rate Limiter Token Bucket por teléfono
-│   ├── providers/               # Clientes externos (PostgreSQL, Gemini 2.5 Flash, Meta Graph API)
+│   ├── providers/               # Clientes externos (PostgreSQL, proveedor LLM compatible OpenAI, Meta Graph API)
 │   ├── repositories/            # Repositorios SQL (Inbound, Outbox, Contact, Conversation, Message, etc.)
 │   ├── services/                # Daemons asíncronos (InboundDispatcher, OutboxDispatcher, RetentionService)
 │   └── utils/                   # Circuit Breaker, crypto HMAC, logger estructurado con sanitizador PII
-└── tests/                       # Suite de 15 archivos de pruebas con Vitest (132/132 passing)
+└── tests/                       # Suite de 15 archivos de pruebas con Vitest (134/134 passing)
 ```
 
 ---
@@ -87,9 +86,9 @@ npm run quality-gate
 
 El script ejecuta 4 verificaciones deterministas:
 1. **Compilación TypeScript AST:** `tsc --noEmit` (0 errores, 0 advertencias, prohibido `any` indiscriminado).
-2. **Escaneo Zero-Trust:** Inspección exhaustiva contra tokens reales de Meta, API keys de Gemini y credenciales en texto plano.
-3. **Integridad de Configuración & Harness:** Validación bidireccional entre `.env.example`, `.gitignore`, `src/config/env.ts`, `AGENTS.md` y `GEMINI.md`.
-4. **Suite Completa de Pruebas Unitarias/Integración:** `vitest run` ejecutando las 132 pruebas automatizadas al 100%.
+2. **Escaneo Zero-Trust:** Inspección exhaustiva contra tokens reales de Meta, API keys del proveedor LLM y credenciales en texto plano.
+3. **Integridad de Configuración & Harness:** Validación bidireccional entre `.env.example`, `.gitignore`, `src/config/env.ts` y `AGENTS.md`.
+4. **Suite Completa de Pruebas Unitarias/Integración:** `vitest run` ejecutando las 134 pruebas automatizadas al 100%.
 
 ---
 
@@ -99,7 +98,7 @@ El script ejecuta 4 verificaciones deterministas:
 * Node.js $\ge 20$
 * PostgreSQL $\ge 15$ (Supabase o instancia local)
 * Cuenta Meta Developers con WhatsApp Business Cloud API
-* Google Gemini API Key
+* API key de un proveedor LLM compatible con OpenAI (OpenAI, Groq, OpenRouter, DeepSeek, vLLM, Ollama, etc.)
 
 ### 2. Instalación
 ```bash
@@ -110,6 +109,13 @@ npm install
 Copia `.env.example` a `.env` y configura tus credenciales:
 ```bash
 cp .env.example .env
+```
+
+Variables del proveedor LLM (sin proveedor ni modelo hardcodeados):
+```dotenv
+LLM_API_KEY=tu_clave_del_proveedor
+LLM_BASE_URL=https://api.openai.com/v1
+LLM_MODEL=nombre-del-modelo
 ```
 
 ### 4. Migraciones de Base de Datos
@@ -138,8 +144,8 @@ npm run quality-gate
 ## 🧪 Estado de la Suite de Pruebas
 
 ```bash
- Test Files  14 passed (14)
-      Tests  125 passed (125)
+ Test Files  15 passed (15)
+      Tests  134 passed (134)
    Coverage  Pipelines Inbound/Outbox, Circuit Breakers, Guardrails, Webhook HMAC, Multi-Tenant RLS
 ```
 

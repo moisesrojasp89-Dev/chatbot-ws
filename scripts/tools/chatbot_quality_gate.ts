@@ -5,7 +5,7 @@
  * Verifies all engineering invariants prior to CI/CD and deployment:
  * 1. TypeScript AST Validation (tsc --noEmit, 0 errors, 0 warnings).
  * 2. Deterministic Test Suite (Vitest, 100% passing suites).
- * 3. Zero-Trust Secret Scanning (no Meta tokens, Gemini keys, or DB credentials in tracked files).
+ * 3. Zero-Trust Secret Scanning (no Meta tokens, LLM provider keys, or DB credentials in tracked files).
  * 4. Configuration & Environment Schema Integrity (.env.example vs env.ts vs .gitignore).
  */
 
@@ -134,11 +134,7 @@ async function checkSecrets(): Promise<void> {
       regex: /EAAB[A-Za-z0-9_-]{50,}/g,
       ignorePlaceholders: /EAAB_YOUR_META_PERMANENT_ACCESS_TOKEN_HERE/,
     },
-    {
-      name: 'Google Gemini API Key real',
-      regex: /AIzaSy[0-9A-Za-z-_]{33}/g,
-      ignorePlaceholders: /AIzaSy_YOUR_GEMINI_API_KEY_HERE/,
-    },
+
     {
       name: 'Clave privada RSA/PGP incrustada',
       regex: /-----BEGIN (?:RSA |EC )?PRIVATE KEY-----/g,
@@ -161,7 +157,6 @@ async function checkSecrets(): Promise<void> {
           entry.name === 'node_modules' ||
           entry.name === 'dist' ||
           entry.name === '.git' ||
-          entry.name === '.gemini' ||
           entry.name === 'coverage'
         ) {
           continue;
@@ -263,12 +258,10 @@ async function checkEnvironmentAndArchitecture(): Promise<void> {
     }
   }
 
-  // C. AGENTS.md y GEMINI.md deben existir en la raíz
+  // C. AGENTS.md debe existir en la raíz
   const agentsMd = path.join(ROOT_DIR, 'AGENTS.md');
-  const geminiMd = path.join(ROOT_DIR, 'GEMINI.md');
 
   if (!fs.existsSync(agentsMd)) issues.push('Falta AGENTS.md en la raíz del proyecto.');
-  if (!fs.existsSync(geminiMd)) issues.push('Falta GEMINI.md en la raíz del proyecto.');
 
   // D. docs/standards_and_harness/self_learning_error_catalog.md debe existir
   const errorCatalog = path.join(ROOT_DIR, 'docs', 'standards_and_harness', 'self_learning_error_catalog.md');

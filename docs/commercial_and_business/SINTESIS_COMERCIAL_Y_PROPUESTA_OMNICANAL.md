@@ -15,7 +15,7 @@ Vendemos un **Asistente Virtual Comercial Autónomo de Respuesta Inmediata ($< 1
 ```text
        ┌──► [WhatsApp Business API] ──┐
        ├──► [Instagram DMs & Reels]   ──┼──► [CEREBRO CENTRAL IA] ──► [Base de Datos / Stock]
-       ├──► [Facebook Messenger/Ads] ──┤      (Gemini + Guardrails)    (Autoconf / Supabase)
+       ├──► [Facebook Messenger/Ads] ──┤      (Proveedor LLM + Guardrails)    (Autoconf / Supabase)
        └──► [TikTok Direct Messages]  ──┘                 │
                                                           ▼
                                             [Enrutamiento de Vendedores]
@@ -62,7 +62,7 @@ Vendemos un **Asistente Virtual Comercial Autónomo de Respuesta Inmediata ($< 1
 
 ### A. Costos Reales de Operación (Lo que te cuesta mantenerlo):
 * **Servidor en la nube (VPS en <VPS_PROVIDER> NYC):** \$6.00 USD / mes (~R\$ 32 BRL).
-* **Inteligencia Artificial (Google Gemini 2.5 Flash):** \$0.50 a \$2.00 USD / mes (~R\$ 3 a R\$ 10 BRL) por miles de respuestas.
+* **Inteligencia Artificial (proveedor LLM configurable):** \$0.50 a \$2.00 USD / mes (~R\$ 3 a R\$ 10 BRL) por miles de respuestas.
 * **Meta WhatsApp Cloud API:** \$0.00 USD *(dentro de las 1.000 conversaciones gratis de Meta)*.
 * **Instagram, Facebook y TikTok:** \$0.00 USD *(Cero costo de API)*.
 * 👉 **COSTO TOTAL REAL DE OPERACIÓN:** **~\$7.00 a \$15.00 USD al mes (~R\$ 38 a R\$ 80 BRL).**

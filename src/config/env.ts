@@ -10,7 +10,13 @@ const envSchema = z.object({
   META_ACCESS_TOKEN: z.string().min(10, 'META_ACCESS_TOKEN requerido'),
   META_APP_SECRET: z.string().min(10, 'META_APP_SECRET requerido para validación HMAC SHA-256'),
   WEBHOOK_VERIFY_TOKEN: z.string().min(6, 'WEBHOOK_VERIFY_TOKEN requerido'),
-  GEMINI_API_KEY: z.string().min(10, 'GEMINI_API_KEY requerida'),
+  // Proveedor LLM genérico (API compatible con Chat Completions de OpenAI).
+  // Sin nombres de proveedor hardcodeados: todo se configura por entorno.
+  LLM_API_KEY: z.string().min(10, 'LLM_API_KEY requerida para el proveedor LLM'),
+  LLM_BASE_URL: z.string().url('LLM_BASE_URL debe ser una URL válida (ej. https://api.openai.com/v1)'),
+  LLM_MODEL: z.string().min(1, 'LLM_MODEL requerida (ej. gpt-4o-mini)'),
+  LLM_MAX_RPM: z.coerce.number().positive().optional(),
+  LLM_MAX_TPM: z.coerce.number().positive().optional(),
   META_PHONE_NUMBER_ID: z.string().default('123456789012345'),
   DATABASE_URL: z.string().min(10, 'DATABASE_URL requerida para persistencia e idempotencia'),
   // Ref del proyecto Supabase dedicado a pruebas (ver src/utils/databaseGuard.ts).

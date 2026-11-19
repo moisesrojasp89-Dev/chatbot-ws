@@ -1,7 +1,7 @@
 import { ContactRecord, ConversationRecord } from '../types/states.js';
 import { messageRepository } from '../repositories/messageRepository.js';
-import { geminiClient } from '../providers/llm/geminiClient.js';
-import { GeminiContentMessage } from '../providers/llm/geminiTypes.js';
+import { llmClient } from '../providers/llm/llmClient.js';
+import { LlmContentMessage } from '../providers/llm/llmTypes.js';
 import { contextManager } from './contextManager.js';
 import { guardrails } from './guardrails.js';
 import { searchProductCatalog } from './tools/catalogTools.js';
@@ -35,7 +35,7 @@ export class AgentEngine {
 
   /**
    * Orquesta el ciclo conversacional completo:
-   * Guardrail N1 -> Context Assembly (F3-C4) -> ReAct Loop Gemini (máx 3) -> Guardrail N3/N4 -> Respuesta lista.
+   * Guardrail N1 -> Context Assembly (F3-C4) -> ReAct Loop LLM (máx 3) -> Guardrail N3/N4 -> Respuesta lista.
    * Si options.deferSideEffects es true, no escribe en BD durante la llamada LLM y retorna las acciones diferidas.
    * Si options.deadlineMs está presente, distribuye el presupuesto de tiempo garantizando no exceder el lease de inbound.
    */
@@ -79,7 +79,7 @@ export class AgentEngine {
     );
 
     // Mensajes activos para el turno conversacional
-    const activeMessages: GeminiContentMessage[] = preparedContext.contents.map((c) => ({
+    const activeMessages: LlmContentMessage[] = preparedContext.contents.map((c) => ({
       role: c.role,
       parts: c.parts.map((p) => ({ text: p.text })),
     }));
@@ -114,7 +114,7 @@ export class AgentEngine {
         throw err;
       }
 
-      const turnResult = await geminiClient.generateTurn(
+      const turnResult = await llmClient.generateTurn(
         preparedContext.systemInstruction,
         activeMessages,
         turnTimeout,
@@ -134,7 +134,7 @@ export class AgentEngine {
             catalogToolExecuted = true;
 
             activeMessages.push({
-              role: 'model',
+              role: 'assistant',
               parts: [{ functionCall: call }],
             });
             activeMessages.push({
@@ -161,7 +161,7 @@ export class AgentEngine {
             }
 
             activeMessages.push({
-              role: 'model',
+              role: 'assistant',
               parts: [{ functionCall: call }],
             });
             activeMessages.push({
@@ -188,7 +188,7 @@ export class AgentEngine {
             }
 
             activeMessages.push({
-              role: 'model',
+              role: 'assistant',
               parts: [{ functionCall: call }],
             });
             activeMessages.push({

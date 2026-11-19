@@ -199,7 +199,7 @@ describe('Fase 5C: Escala, Sliding Worker Pool, Rate Limiter Dual & Coalescencia
   });
 
   /**
-   * C7 Error Path: Si la llamada a Gemini falla (error 5xx, timeout, abort), se reembolsan íntegramente los tokens de TPM reservados
+   * C7 Error Path: Si la llamada al proveedor LLM falla (error 5xx, timeout, abort), se reembolsan íntegramente los tokens de TPM reservados
    */
   it('C7 Error Path: Error en llamada LLM reembolsa al 100% los tokens de TPM reservados evitando fugas de cuota', () => {
     const limiter = new LlmRateLimiter({ maxRPM: 60, maxTPM: 100000 });

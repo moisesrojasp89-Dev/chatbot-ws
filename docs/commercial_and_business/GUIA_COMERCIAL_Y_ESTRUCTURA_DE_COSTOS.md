@@ -44,9 +44,13 @@ El sistema funciona con **4 componentes tecnológicos**. Aquí está el costo re
 * **Costo inicial (Tier Gratuito):** **$0.00 USD**. Cubre hasta 500 MB (suficiente para más de 150,000 mensajes y miles de clientes).
 * **Costo profesional (Supabase Pro):** **$25.00 USD al mes**. Para clientes corporativos grandes; incluye copias de seguridad diarias automáticas y almacenamiento de 8 GB.
 
-### C. Cerebro de Inteligencia Artificial (Google Gemini 2.5 Flash)
+### C. Cerebro de Inteligencia Artificial (proveedor LLM configurable)
+
+> **Nota:** los costos de esta sección se calcularon con Gemini 2.5 Flash como referencia histórica. El motor es agnóstico: recalcula con la tarifa del proveedor configurado en LLM_BASE_URL y LLM_MODEL.
+
+*
 * **¿Qué hace?** Lee la consulta del usuario, consulta el catálogo y redacta la respuesta natural.
-* **Costo real:** Gemini es extraordinariamente económico:
+* **Costo de referencia:** Gemini 2.5 Flash es extraordinariamente económico:
   * ~$0.075 USD por 1 millón de tokens de entrada.
   * ~$0.30 USD por 1 millón de tokens de salida.
 * **En lenguaje real:**
@@ -73,7 +77,7 @@ El sistema funciona con **4 componentes tecnológicos**. Aquí está el costo re
   * Servidor VPS (compartido): $5.00 USD
   * Base de datos (Supabase Free): $0.00 USD
   * Meta WhatsApp API: $0.00 USD *(dentro de las 1,000 gratis)*
-  * IA Gemini: ~$1.00 USD
+  * IA (proveedor LLM): ~$1.00 USD
 * **👉 Costo total operativo real:** **~$6.00 USD / mes**
 * **👉 Precio sugerido de venta al cliente:** **$120.00 USD / mes**
 * **💰 Ganancia Neta Mensual:** **~$114.00 USD (Margen del 95%)**
@@ -86,7 +90,7 @@ El sistema funciona con **4 componentes tecnológicos**. Aquí está el costo re
   * Servidor VPS dedicado: $10.00 USD
   * Base de datos Supabase Pro: $25.00 USD
   * Meta WhatsApp API (1,000 gratis + 2,000 pagadas @ $0.030 USD): ~$60.00 USD
-  * IA Gemini: ~$3.50 USD
+  * IA (proveedor LLM): ~$3.50 USD
 * **👉 Costo total operativo real:** **~$98.50 USD / mes**
 * **👉 Precio sugerido de venta al cliente:** **$350.00 USD / mes**
 * **💰 Ganancia Neta Mensual:** **~$251.50 USD (Margen del 71%)**

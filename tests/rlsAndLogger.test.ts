@@ -231,7 +231,7 @@ describe('Fase 5B: Seguridad RLS (I20) y Sanitización de PII en Logs (I20 / B7 
         {
           token: 'EAAB_SECRET_META_TOKEN_123456789',
           lockToken: '9b1deb4d-3b7d-4bad-9bdd-2b0d7b3dcb6d',
-          apiKey: 'AIzaSy_SECRET_GEMINI_KEY_9999',
+          apiKey: 'sk-SECRET_LLM_KEY_9999',
           headers: { authorization: 'Bearer secret_auth_jwt_token' },
         },
         'Tokens de autenticación'
@@ -266,7 +266,7 @@ describe('Fase 5B: Seguridad RLS (I20) y Sanitización de PII en Logs (I20 / B7 
 
       // Tokens censurados
       expect(fullLogOutput).not.toContain('EAAB_SECRET_META_TOKEN_123456789');
-      expect(fullLogOutput).not.toContain('AIzaSy_SECRET_GEMINI_KEY_9999');
+      expect(fullLogOutput).not.toContain('sk-SECRET_LLM_KEY_9999');
       expect(fullLogOutput).not.toContain('EAAB_META_PRIVATE_ACCESS_TOKEN');
       expect(fullLogOutput).not.toContain('secret_auth_jwt_token');
 

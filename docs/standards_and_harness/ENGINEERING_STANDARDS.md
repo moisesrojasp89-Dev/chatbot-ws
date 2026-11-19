@@ -111,7 +111,7 @@ Las APIs de modelos de lenguaje (Gemini, OpenAI, Claude) imponen límites de cuo
    Si la llamada a la IA excede un timeout de $3.0\text{ s}$ o retorna error `429 Too Many Requests`, el sistema conmuta instantáneamente a una plantilla de contingencia:
    > *"Hola [Nombre], estamos recibiendo un volumen inusual de consultas. He registrado tu solicitud y un asesor del equipo se comunicará contigo por este mismo chat en breve."*
 2. **Provider Redundante (Multi-LLM Failover):**
-   Capacidad de alternar entre proveedores primarios y secundarios (ejemplo: Gemini 2.5 Flash como motor principal por velocidad y costo, con fallback a Claude 3.5 Sonnet / OpenAI ante incidentes).
+   Capacidad de alternar entre proveedores primarios y secundarios (por ejemplo, un modelo económico como motor principal y otro proveedor como fallback ante incidentes).
 3. **Caché Semántica para Preguntas Frecuentes (FAQ):**
    Consultas idénticas sobre horarios, ubicación, métodos de pago o catálogos se resuelven mediante respuestas deterministas o caché en memoria, con costo en tokens de $\$0$ y latencia de $< 100\text{ ms}$.
 

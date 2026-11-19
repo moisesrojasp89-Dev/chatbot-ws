@@ -18,7 +18,7 @@ La base de datos de desarrollo, pruebas y certificación es un **proyecto Supaba
 ┌────────────────────────────────────────────────────────────────────────┐
 │  BASE DE DATOS DE PRUEBAS (Staging / Dev - proyecto Supabase dedicado) │
 │  • Es nuestro "laboratorio" de ingeniería.                             │
-│  • Aquí corren los 132 tests automatizados.                            │
+│  • Aquí corren los 134 tests automatizados.                            │
 │  • Aquí probamos migraciones SQL antes de aplicarlas a clientes.       │
 │  • Contiene datos de prueba y mocks de Meta.                           │
 │  ⚠️ NUNCA se mezcla con clientes reales ni con ventas comerciales.     │
@@ -52,7 +52,7 @@ No creamos un repositorio de GitHub nuevo para cada cliente. El repositorio que 
 ```
 
 ### ¿Por qué esta es la forma profesional?
-1. **Actualizaciones en 5 segundos:** Si mañana Meta actualiza su API de WhatsApp, o agregamos una mejora al motor de Gemini, o conectamos Instagram DMs, tú haces un solo `git push` en tu GitHub y **todos tus clientes reciben la mejora al instante**.
+1. **Actualizaciones en 5 segundos:** Si mañana Meta actualiza su API de WhatsApp, o agregamos una mejora al motor LLM, o conectamos Instagram DMs, tú haces un solo `git push` en tu GitHub y **todos tus clientes reciben la mejora al instante**.
 2. **Cero Deuda Técnica:** Si tuvieras 10 repositorios distintos, tendrías que abrir 10 proyectos, cambiar código a mano 10 veces y probar 10 veces. Con un repositorio maestro, tu costo de mantenimiento es casi cero.
 3. **Control Total:** Tú eres el único dueño del código fuente. Los clientes solo compran el acceso al servicio, no tu propiedad intelectual.
 

@@ -22,14 +22,14 @@ C4Context
     System(chatbot_system, "Sistema Chatbot WS", "Plataforma de atención automatizada inmediata con IA y handoff humano")
 
     System_Ext(meta_whatsapp, "Meta Cloud API", "Infraestructura oficial de WhatsApp (Graph API)")
-    System_Ext(gemini_ai, "Google Gemini 2.5 Flash", "Inferencia de lenguaje natural y function calling")
+    System_Ext(llm_provider, "Proveedor LLM (API compatible OpenAI)", "Inferencia de lenguaje natural y function calling")
     System_Ext(crm_db, "Base de Datos & CRM", "PostgreSQL / Supabase para contactos, estados y leads")
     System_Ext(alerts_channel, "Canal de Notificaciones", "Webhook / Telegram / Dashboard para alertar al asesor")
 
     Rel(customer, meta_whatsapp, "Envía y recibe mensajes", "WhatsApp Protocol")
     Rel(meta_whatsapp, chatbot_system, "Entrega eventos (HTTPS POST Webhook)", "JSON / HMAC SHA-256")
     Rel(chatbot_system, meta_whatsapp, "Despacha respuestas y typing indicator", "HTTPS REST")
-    Rel(chatbot_system, gemini_ai, "Inferencia controlada con schemas", "HTTPS / gRPC")
+    Rel(chatbot_system, llm_provider, "Inferencia controlada con schemas", "HTTPS / JSON")
     Rel(chatbot_system, crm_db, "Consulta y persiste estados, mensajes y leads", "PostgreSQL Wire")
     Rel(chatbot_system, alerts_channel, "Notifica solicitudes de escalamiento humano", "HTTPS Webhook")
     Rel(agent, alerts_channel, "Recibe alertas de handoff con briefing", "UI / App")
@@ -44,7 +44,7 @@ C4Context
 flowchart TB
     subgraph EXTERNAL ["Servicios Externos"]
         META["Meta WhatsApp Cloud API"]
-        GEMINI["Google Gemini 2.5 Flash API"]
+        LLM_PROVIDER["Proveedor LLM (API compatible OpenAI)"]
     end
 
     subgraph BACKEND ["Contenedor Backend (Node.js / TypeScript + Fastify)"]
@@ -89,7 +89,7 @@ flowchart TB
     FSM <--> CTX
     CTX <--> GUARDS
     GUARDS <--> TOOLS
-    TOOLS <--> GEMINI
+    TOOLS <--> LLM_PROVIDER
     FSM --> HANDOFF
     FSM --> CADENCE
     CADENCE --> OUTBOX
@@ -357,7 +357,7 @@ Nombre del cliente: {{CUSTOMER_NAME}}
 
 ---
 
-### D. Tools Empresariales Oficiales (Gemini Function Calling Schemas)
+### D. Tools Empresariales Oficiales (Function Calling con JSON Schema)
 
 #### Tool 1: `searchProductCatalog`
 ```json
@@ -435,8 +435,8 @@ Nombre del cliente: {{CUSTOMER_NAME}}
        │
        ▼
 [ NIVEL 2: Inferencia Controlada (Function Calling en modo AUTO) ]
-       ├── Configuración: tool_config: { function_calling_config: { mode: "AUTO" } }
-       ├── Gemini razona la intención y decide invocar Tool o responder texto corto
+       ├── Configuración: tool_choice: "auto"
+       ├── El LLM razona la intención y decide invocar Tool o responder texto corto
        │
        ▼
 [ NIVEL 3: Grounding Lock Revisado (Protección Robusta de Precios) ]
@@ -605,7 +605,9 @@ const envSchema = z.object({
   META_ACCESS_TOKEN: z.string().min(20, "Meta Permanent Access Token requerido"),
   META_APP_SECRET: z.string().min(10, "Meta App Secret requerido para HMAC"),
   WEBHOOK_VERIFY_TOKEN: z.string().min(6, "Webhook Verify Token requerido"),
-  GEMINI_API_KEY: z.string().min(10, "Gemini API Key requerida"),
+  LLM_API_KEY: z.string().min(10, "LLM API Key requerida"),
+  LLM_BASE_URL: z.string().url("URL base del proveedor LLM"),
+  LLM_MODEL: z.string().min(1, "Modelo del proveedor LLM"),
   DATABASE_URL: z.string().url("Cadena de conexión PostgreSQL requerida"),
 });
 
@@ -637,7 +639,7 @@ Si falta alguna variable en el entorno del hosting (Railway, Render, VPS), el pr
 │         │                            │             │ repositorio de contactos. │
 ├─────────┼────────────────────────────┼─────────────┼───────────────────────────┤
 │ FASE 3  │ Motor Agéntico (Harness)   │ 5 a 7 Días  │ FSM conversacional,       │
-│         │ & Inferencia Gemini        │             │ schemas de Tools (AUTO),  │
+│         │ & Inferencia LLM           │             │ schemas de Tools (AUTO),  │
 │         │                            │             │ Grounding Lock robusto,   │
 │         │                            │             │ retardo typing cadence.   │
 ├─────────┼────────────────────────────┼─────────────┼───────────────────────────┤

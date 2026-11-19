@@ -13,7 +13,7 @@ interface QueuedItem {
 }
 
 /**
- * Token Bucket continuo para control dual de cuotas (RPM y TPM) hacia Google Gemini API.
+ * Token Bucket continuo para control dual de cuotas (RPM y TPM) hacia el proveedor LLM configurado.
  * 
  * Cumple con:
  * - C6: Recarga matemática continua (tokens += elapsedMs * rate) para erradicar ráfagas en bordes de minuto.
@@ -32,8 +32,8 @@ export class LlmRateLimiter {
   private drainTimer: NodeJS.Timeout | null = null;
 
   constructor(config?: LlmRateLimiterConfig) {
-    this.maxRPM = config?.maxRPM ?? Number(process.env.GEMINI_MAX_RPM ?? 60);
-    this.maxTPM = config?.maxTPM ?? Number(process.env.GEMINI_MAX_TPM ?? 100000);
+    this.maxRPM = config?.maxRPM ?? Number(process.env.LLM_MAX_RPM ?? 60);
+    this.maxTPM = config?.maxTPM ?? Number(process.env.LLM_MAX_TPM ?? 100000);
 
     this.rpmTokens = this.maxRPM;
     this.tpmTokens = this.maxTPM;
@@ -76,7 +76,7 @@ export class LlmRateLimiter {
   }
 
   /**
-   * Solicita autorización para ejecutar una llamada hacia Gemini.
+   * Solicita autorización para ejecutar una llamada hacia el proveedor LLM.
    * Si hay saldo disponible, resuelve síncronamente o de inmediato.
    * Si no, encola en estricto orden FIFO hasta que la recarga continua cubra el costo.
    */
@@ -110,7 +110,7 @@ export class LlmRateLimiter {
           if (index !== -1) {
             this.queue.splice(index, 1);
           }
-          const abortErr = new Error('Llamada a Gemini cancelada por AbortSignal mientras esperaba cuota');
+          const abortErr = new Error('Llamada al proveedor LLM cancelada por AbortSignal mientras esperaba cuota');
           abortErr.name = 'AbortError';
           reject(abortErr);
         };
@@ -175,7 +175,7 @@ export class LlmRateLimiter {
   }
 
   /**
-   * C7: Reconciliación post-inferencia con el consumo real devuelto por la API de Gemini.
+   * C7: Reconciliación post-inferencia con el consumo real devuelto por la API del proveedor LLM.
    * Si se estimaron 300 tokens pero la respuesta solo gastó 140, se devuelven 160 tokens al bucket.
    */
   public reconcile(estimatedTokens: number, actualTokens: number): void {
@@ -185,7 +185,7 @@ export class LlmRateLimiter {
       this.tpmTokens = Math.min(this.maxTPM, this.tpmTokens + refund);
       logger.debug(
         { estimatedTokens, actualTokens, refund, currentTpmTokens: Math.round(this.tpmTokens) },
-        '⚖️ Saldo de TPM reconciliado con telemetría real de Gemini'
+        '⚖️ Saldo de TPM reconciliado con telemetría real del proveedor LLM'
       );
       // Intentar drenar cola si había alguien esperando tokens
       if (this.queue.length > 0) {

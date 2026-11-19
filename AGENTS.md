@@ -26,7 +26,7 @@
 ## 🛑 2. Mandamientos Inquebrantables del Código
 
 ### A. Seguridad Zero-Trust y Cero Secretos en Código
-- Jamás incrustar tokens de Meta Cloud API, App Secrets de WhatsApp, contraseñas de PostgreSQL o API keys de Gemini en código rastreado por git.
+- Jamás incrustar tokens de Meta Cloud API, App Secrets de WhatsApp, contraseñas de PostgreSQL o API keys del proveedor LLM en código rastreado por git.
 - Usar siempre variables de entorno tipadas y validadas con `zod`.
 
 ### B. Idempotencia y Deduplicación Estricta de Mensajes
@@ -39,7 +39,7 @@
 
 ### D. Presupuesto de Pruebas Determinista & Mocks de Red
 - La suite completa de pruebas (`npm test` con Vitest) debe ejecutarse de forma ágil y determinista.
-- **Cero peticiones reales a Meta Graph API o Google GenAI en tests:** Todas las llamadas externas deben interceptarse con mocks deterministas.
+- **Cero peticiones reales a Meta Graph API o al proveedor LLM en tests:** Todas las llamadas externas deben interceptarse con mocks deterministas.
 
 ### E. Manejo Defensivo y Tipado Estricto
 - `tsc --noEmit` debe compilar con 0 errores y 0 advertencias de tipos. Prohibido el uso indiscriminado de `any`.

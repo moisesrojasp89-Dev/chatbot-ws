@@ -69,7 +69,7 @@ Meta exige que tu endpoint de webhook responda con un código **`HTTP 200 OK` en
 Un chatbot corporativo maneja credenciales de alto valor:
 1. **Meta WhatsApp System User Access Token** (con permisos permanentes de envío).
 2. **Meta App Secret & Webhook Verify Token** (para validar autenticidad de mensajes entrantes).
-3. **Claves de Modelos de Lenguaje** (`GEMINI_API_KEY`, `OPENAI_API_KEY`, `ANTHROPIC_API_KEY`).
+3. **Claves de Modelos de Lenguaje** (`LLM_API_KEY` + `LLM_BASE_URL` + `LLM_MODEL`).
 4. **Cadenas de Conexión a Base de Datos** (`SUPABASE_SERVICE_ROLE_KEY`, `DATABASE_URL`).
 
 ### Tabla de Seguridad Zero-Trust:
@@ -92,7 +92,7 @@ Cuando la Inteligencia Artificial programa sin supervisión de un arquitecto, su
 * **La Solución:** Todo mensaje recibido debe registrarse en una tabla o caché de idempotencia (`processed_messages` con `message_id` como clave primaria). Si el ID ya existe, se descarta silenciosamente con `200 OK`.
 
 ### 2. Archivos Monolito Gigantescos (>400 líneas)
-* **El Anti-patrón:** La IA prefiere amontonar todo en `index.js`: la configuración del servidor Express/FastAPI, las llamadas a WhatsApp, el prompt de Gemini, la conexión a la base de datos y los formateadores de texto.
+* **El Anti-patrón:** La IA prefiere amontonar todo en `index.js`: la configuración del servidor Express/FastAPI, las llamadas a WhatsApp, el prompt del LLM, la conexión a la base de datos y los formateadores de texto.
 * **Consecuencia:** Tras dos semanas, cualquier cambio rompe partes no relacionadas y la propia IA empieza a olvidar código al editar.
 * **La Solución:** Modularidad estricta en 5 capas:
   ```text
@@ -150,7 +150,7 @@ Cuando la Inteligencia Artificial programa sin supervisión de un arquitecto, su
 | Nivel | Lo que pide un Desarrollador Novato | Lo que pide un Arquitecto de Software |
 |---|---|---|
 | **Webhooks** | *"Hazme una ruta en Express para recibir WhatsApp"* | *"Crea el controlador `webhookController.js`. Debe validar primero la firma HMAC `X-Hub-Signature-256`, responder `200 OK` inmediatamente para evitar reintentos de Meta, y encolar el evento con clave de idempotencia `wamid`."* |
-| **IA / Prompts** | *"Conéctalo a Gemini para que hable como vendedor"* | *"Diseña el servicio `geminiService.js` utilizando un schema tipado con respuesta JSON estructurada. Implementa un timeout defensivo de 3 segundos y fallback determinista en caso de error 429 o fallo de conexión."* |
+| **IA / Prompts** | *"Conéctalo a un proveedor LLM para que hable como vendedor"* | *"Diseña el cliente `llmClient.ts` utilizando un schema tipado con respuesta JSON estructurada. Implementa un timeout defensivo de 3 segundos y fallback determinista en caso de error 429 o fallo de conexión."* |
 | **Memoria** | *"Haz que el bot se acuerde de lo que hablamos"* | *"Implementa la capa de persistencia de sesión por número de teléfono en PostgreSQL/Redis. Limita el historial a los últimos 6 turnos e inyecta un estado resumido con las entidades extraídas del cliente."* |
 
 ---

@@ -37,7 +37,7 @@ Para tomar decisiones informadas, es vital comprender el flujo que ocurre en mil
       │ 1. Activa indicador "Escribiendo..." en el chat del cliente.
       │ 2. Busca en Base de Datos: Historial, nombre, estado en el embudo.
       │ 3. Evalúa Guardrails: ¿Solicita hablar con un humano? ¿Intenta jailbreak?
-      │ 4. Inyecta Contexto al LLM (Gemini): Instrucciones de tono + Tools (Catálogo/Precios).
+      │ 4. Inyecta Contexto al LLM (proveedor configurable): Instrucciones de tono + Tools (Catálogo/Precios).
       │ 5. El Modelo razona y genera respuesta concisa o llama a la Tool de Precios.
       ▼
 [ OUTBOX DISPATCHER ]
@@ -104,7 +104,7 @@ Existen tres formas de conectar un software a WhatsApp. Esta es la auditoría de
 * **Backend:** Node.js con Fastify o Express en TypeScript.
 * **Procesamiento de Colas & Idempotencia:** Redis + BullMQ (maneja miles de webhooks en paralelo sin colapsar).
 * **Base de Datos & Auth:** PostgreSQL (mediante Supabase o base de datos propia).
-* **Motor de IA:** SDK oficial de Google Gen AI (`@google/genai` con modelo **Gemini 2.5 Flash**).
+* **Motor de IA:** Cliente LLM genérico (API compatible OpenAI) configurado con `LLM_BASE_URL` + `LLM_MODEL`; sin SDK propietario.
 * **Ventajas:**
   * Fastify/Node maneja I/O concurrente de forma sobresaliente (ideal para webhooks de mensajería).
   * Tipado estricto con TypeScript para evitar errores en tiempo de ejecución.
@@ -127,8 +127,8 @@ Para que el modelo de negocio sea transparente y rentable:
 
 1. **Meta WhatsApp Cloud API:**
    * Conversaciones iniciadas por el usuario (Servicio al Cliente): Las primeras **1,000 conversaciones al mes son GRATIS**. Luego, aproximadamente $\$0.01$ a $\$0.03$ USD por conversación de 24 horas (según el país de LATAM).
-2. **Inferencia de IA (Gemini 2.5 Flash):**
-   * Gemini 2.5 Flash tiene un costo aproximado de $\$0.075$ USD por millón de tokens de entrada y $\$0.30$ USD por millón de salida.
+2. **Inferencia de IA (proveedor LLM configurable):**
+   * Costo de referencia (Gemini 2.5 Flash, al momento de la propuesta): $\$0.075$ USD por millón de tokens de entrada y $\$0.30$ USD por millón de salida.
    * Una conversación promedio consume $\approx 2,000$ tokens ($\approx \$0.0003$ USD).
    * **Costo de IA por cada 1,000 conversaciones: menos de $\$0.50$ USD.**
 3. **Infraestructura Cloud (Servidor / VPS):**
@@ -150,7 +150,7 @@ Para que el modelo de negocio sea transparente y rentable:
 └───────────┬─────────────┘
             ▼
 ┌─────────────────────────┐
-│ FASE 3: HARNESS & IA    │ ──► Integración de Gemini 2.5 Flash con schemas tipados,
+│ FASE 3: HARNESS & IA    │ ──► Integración de proveedor LLM con schemas tipados,
 │ (CEREBRO CONTROLADO)    │     ventana móvil de contexto, guardrails y typing delay.
 └───────────┬─────────────┘
             ▼

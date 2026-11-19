@@ -83,13 +83,15 @@ META_ACCESS_TOKEN=EAAB_TEST_TOKEN_DEVELOPMENT_PURPOSES_ONLY_123456789
 META_APP_SECRET=dev_secret_meta_hash_32_characters_ok
 WEBHOOK_VERIFY_TOKEN=dev_verify_token_secure_123
 
-# Motor IA
-GEMINI_API_KEY=AIzaSy_YOUR_GEMINI_API_KEY_HERE
+# Proveedor LLM (API compatible OpenAI)
+LLM_API_KEY=your_llm_provider_api_key
+LLM_BASE_URL=https://api.openai.com/v1
+LLM_MODEL=your-model-name
 
 # Supabase PostgreSQL Pooler (São Paulo sa-east-1)
-DATABASE_URL=postgresql://postgres.[<PROJECT_REF>]:[DB-PASSWORD]@<SUPABASE_POOLER_HOST>:6543/postgres
+DATABASE_URL=postgresql://postgres.[<PROJECT_REF>]:[DB-PASSWORD]@<SUPABASE_POOLER_HOST>:5432/postgres
 ```
-*(Nota operativa: Cuando se deseen conectar las credenciales finales de la App de Meta o la clave real de Gemini, se actualizan estas variables en `/opt/chatbot-ws/.env` y se reinicia el servicio con `systemctl restart chatbot-ws`)*.
+*(Nota operativa: Cuando se deseen conectar las credenciales finales de la App de Meta o la clave real del proveedor LLM, se actualizan estas variables en `/opt/chatbot-ws/.env` y se reinicia el servicio con `systemctl restart chatbot-ws`)*.
 
 ### 5.3. Unidad Systemd (`/etc/systemd/system/chatbot-ws.service`)
 ```ini

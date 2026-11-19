@@ -1,14 +1,14 @@
 # 🧠 Bitácora Técnica: Motor Agéntico, LLM & Gestión Conversacional
 
-> **Dominio:** Integración con Google Gemini, Guardrails Multi-Nivel, Máquina de Estados (FSM), Function Calling, Control de Cuotas (RPM/TPM) y Coalescencia.
+> **Dominio:** Integración con proveedor LLM (API compatible OpenAI), Guardrails Multi-Nivel, Máquina de Estados (FSM), Function Calling, Control de Cuotas (RPM/TPM) y Coalescencia.
 
 ---
 
 ## 🚀 Evolución y Decisiones Clave por Fase
 
-### 1. Motor Agéntico y Gemini 2.5 Flash (Fase 3)
-* **SDK Oficial `@google/genai`:**
-  * Uso de Google GenAI SDK con modelo `gemini-2.5-flash` para balance óptimo de latencia (<1.5s) y razonamiento estructurado.
+### 1. Motor Agéntico y Proveedor LLM (Fase 3)
+* **Cliente LLM genérico (API compatible OpenAI):**
+  * Cliente HTTP propio (sin SDK de proveedor) con `LLM_BASE_URL`, `LLM_MODEL` y `LLM_API_KEY`; permite alternar OpenAI, Groq, OpenRouter, DeepSeek, vLLM/Ollama o cualquier endpoint compatible sin tocar código.
 * **Máquina de Estados Finitos (FSM):**
   * Estados soportados: `IDLE`, `QUALIFYING`, `CATALOG_QUERY`, `BOOKING`, `CLOSING`, `CLOSED`, `HUMAN_ESCALATION`.
   * Interceptor global para `HUMAN_ESCALATION` accesible desde cualquier punto de la conversación.
@@ -30,7 +30,7 @@
 ### 3. Escala Empresarial, Rate Limiting Dual & Coalescencia (Fase 5C)
 * **Rate Limiter Dual (RPM & TPM):**
   * Algoritmo Leaky Bucket dual para controlar simultáneamente Requests Per Minute (RPM) y Tokens Per Minute (TPM).
-  * Reserva anticipada de tokens con estimación inicial (3,000 tokens) y reconciliación exacta posterior contra los metadatos de uso reportados por Gemini (`usageMetadata`).
+  * Reserva anticipada de tokens con estimación inicial (3,000 tokens) y reconciliación exacta posterior contra los metadatos de uso reportados por el proveedor (`usage`).
   * Reembolso del 100% de los tokens reservados si la llamada al LLM falla, evitando fugas de cuota acumuladas.
 * **Coalescencia de Mensajes Contiguos:**
   * Si un usuario de WhatsApp envía múltiples mensajes de texto sucesivos en ráfaga (ej: "Hola", "¿Tienen autos?", "En Santiago"), el sistema coalese hasta 5 mensajes contiguos en un solo turno de inferencia LLM.

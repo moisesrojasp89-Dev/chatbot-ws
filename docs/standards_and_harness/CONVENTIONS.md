@@ -36,9 +36,9 @@ Chatbot WS/
 │   │   ├── whatsapp/            # Adaptador de WhatsApp (Meta Cloud API / Baileys)
 │   │   │   ├── whatsappAdapter.js
 │   │   │   └── messageFormatter.js
-│   │   ├── llm/                 # Proveedores de IA (Gemini / OpenAI / Claude)
+│   │   ├── llm/                 # Proveedores LLM (API compatible OpenAI)
 │   │   │   ├── llmProvider.js
-│   │   │   └── geminiAdapter.js
+│   │   │   └── openaiCompatibleAdapter.js
 │   │   └── database/            # Conexión y repositorio de datos (PostgreSQL / Supabase)
 │   │       └── dbClient.js
 │   ├── services/                # Casos de uso de negocio
@@ -55,14 +55,13 @@ Chatbot WS/
 ├── .env.example                 # Plantilla pública de variables de entorno
 ├── .gitignore                   # Exclusiones de Git (cero credenciales)
 ├── AGENTS.md                    # Mandato institucional para agentes de IA
-├── GEMINI.md                    # Espejo de directivas operativas (Antigravity/Gemini)
 ├── package.json                 # Dependencias y scripts de ejecución
 └── README.md                    # Introducción rápida y puesta en marcha
 ```
 
 ### 1.1 Regla de Ubicación Documental (raíz limpia)
 
-La raíz del repositorio solo aloja configuración y puntos de entrada (`README.md`, `AGENTS.md`, `GEMINI.md`, `package.json`, `tsconfig.json`, `.env.example`, `.gitignore`). Toda la documentación vive en `docs/`:
+La raíz del repositorio solo aloja configuración y puntos de entrada (`README.md`, `AGENTS.md`, `package.json`, `tsconfig.json`, `.env.example`, `.gitignore`). Toda la documentación vive en `docs/`:
 
 | Tipo de documento | Ubicación obligatoria |
 | :--- | :--- |
@@ -102,7 +101,7 @@ La raíz del repositorio solo aloja configuración y puntos de entrada (`README.
    * El archivo `.env.example` debe estar siempre sincronizado con todas las claves que el proyecto necesita para funcionar, con valores de ejemplo vacíos o ficticios.
    * **NUNCA** registrar secretos reales en `.env.example`.
 2. **Validación de Variables al Iniciar el Servidor:**
-   * El sistema no debe iniciar si falta una variable crítica. Se debe usar un validador (como Zod) en `src/config/env.js` que lance error explicativo al arrancar si falta `META_ACCESS_TOKEN` o `GEMINI_API_KEY`.
+   * El sistema no debe iniciar si falta una variable crítica. Se debe usar un validador (como Zod) en `src/config/env.js` que lance error explicativo al arrancar si falta `META_ACCESS_TOKEN` o `LLM_API_KEY`.
 3. **El Archivo `.gitignore` Obligatorio:**
    * Debe contener sin excepción:
      ```gitignore

@@ -79,7 +79,7 @@ stateDiagram-v2
             SessionEntities --> GroundingLock : Inyectar Esquemas Zod & Reglas
         }
         
-        CONTEXT_ASSEMBLY --> CIRCUIT_BREAKER : Verificar estado de Gemini
+        CONTEXT_ASSEMBLY --> CIRCUIT_BREAKER : Verificar estado del proveedor LLM
         
         state CIRCUIT_BREAKER {
             [*] --> CheckCircuit : ¿CLOSED, OPEN o HALF-OPEN?
@@ -88,10 +88,10 @@ stateDiagram-v2
         }
         
         state LLM_INFERENCE {
-            [*] --> GeminiCall : Structured Output (JSON Schema)
-            GeminiCall --> ToolExecution : ¿Invocó herramientas?
-            ToolExecution --> GeminiCall : Feedback de Tool remediable
-            GeminiCall --> PostLLMGuards : Respuesta final generada
+            [*] --> LlmCall : Structured Output (JSON Schema)
+            LlmCall --> ToolExecution : ¿Invocó herramientas?
+            ToolExecution --> LlmCall : Feedback de Tool remediable
+            LlmCall --> PostLLMGuards : Respuesta final generada
         }
         
         DEGRADED_FALLBACK --> PostLLMGuards : Menú determinista sin LLM
@@ -151,7 +151,7 @@ Uno de los hallazgos empíricos más contundentes de **arXiv:2609.00006** tras a
 ### ¿Por qué Cero Frameworks Agénticos en Chatbot WS?
 1. **Transparencia y Depuración Determinista:** En mensajería empresarial con un SLA de respuesta `<1.5s`, una capa intermedia opaca que inyecta prompts invisibles, secuestra el control de errores o agrega retrasos de 500ms es inaceptable.
 2. **Control Absoluto del Event Loop:** Node.js es single-threaded. Cualquier framework que bloquee el ciclo con serializaciones innecesarias o abstracciones pesadas degrada la concurrencia masiva de webhooks.
-3. **El Arnés ES el Framework:** La combinación de Fastify + repositorios PostgreSQL + Zod + SDK directo de Gemini constituye un arnés con cero dependencias superfluas.
+3. **El Arnés ES el Framework:** La combinación de Fastify + repositorios PostgreSQL + Zod + cliente HTTP genérico para APIs compatibles con OpenAI constituye un arnés con cero dependencias superfluas.
 
 ### ¿Por qué Cero RAG Vectorial para Catálogos y Tarifas?
 1. **Falta de Precisión y Alucinaciones de Similitud Coseno:** La búsqueda vectorial es probabilística. Si un usuario pide *"viaje de San Cristóbal a Cúcuta"*, un vector RAG puede devolver la tarifa de *"Cúcuta a Bucaramanga"* por cercanía semántica. En aplicaciones comerciales y financieras, esto destruye la confianza y genera pérdidas económicas.
@@ -269,8 +269,8 @@ flowchart TD
 
 ### D2: Integración LLM y Co-Diseño Modelo–Arnés
 * **Optimización de Caché de Prompt:** Separación estricta entre el prefijo estático inmutable (políticas de empresa, reglas de atención, esquemas de tools Zod) y el sufijo dinámico volátil (últimos turnos del usuario).
-* **Prefijos Bit-Perfect:** Garantizar que los primeros 1,500 tokens del contexto sean byte-a-byte idénticos entre conversaciones del mismo tenant, alcanzando un **Prompt Cache Hit Rate superior al 80%** en Gemini y reduciendo la latencia de inferencia a `<600ms`.
-* **Structured Outputs por Contrato:** Ninguna decisión de negocio se parsea con expresiones regulares sobre texto libre; se requiere `response_schema` en la API de Gemini respaldado por esquemas Zod estrictos.
+* **Prefijos Bit-Perfect:** Garantizar que los primeros 1,500 tokens del contexto sean byte-a-byte idénticos entre conversaciones del mismo tenant, alcanzando un **Prompt Cache Hit Rate superior al 80%** en el proveedor LLM y reduciendo la latencia de inferencia a `<600ms`.
+* **Structured Outputs por Contrato:** Ninguna decisión de negocio se parsea con expresiones regulares sobre texto libre; se requiere JSON Schema nativo en la API del proveedor respaldado por esquemas Zod estrictos.
 
 ### D3: Sistemas de Herramientas y Acciones (*ACI - Agent-Computer Interface*)
 * **Doctrina de Pocas Herramientas Pensadas (*Few Thoughtful Tools*):** Rechazo a exponer tablas directas de PostgreSQL como tools. Consolidar herramientas en operaciones atómicas de alta semántica: `quote_trip`, `confirm_booking`, `search_catalog`, `escalate_to_human`.
@@ -323,8 +323,8 @@ flowchart TD
 | Componente Canónico (arXiv:2609.00006 & @0xwhrrari) | Módulo en Chatbot WS | Módulo en TrasladosYa | Responsabilidad Técnica |
 |---|---|---|---|
 | **D1: Loop & Ingesta** | `src/routes/webhook.ts` | `src/routes/webhook.ts` | Verificación HMAC SHA-256, deduplicación `wamid` y 200 OK `<100ms`. |
-| **D1: Circuit Breaker** | `src/services/circuitBreaker.ts` | `src/services/circuitBreaker.ts` | Detección de fallos en Gemini, fallback a menús estructurados. |
-| **D2: LLM & Caching** | `src/services/geminiService.ts` | `src/services/geminiService.ts` | Integración Gemini 2.5 Flash con Structured Outputs y prefijo estático. |
+| **D1: Circuit Breaker** | `src/services/circuitBreaker.ts` | `src/services/circuitBreaker.ts` | Detección de fallos del proveedor LLM, fallback a menús estructurados. |
+| **D2: LLM & Caching** | `src/providers/llm/llmClient.ts` | `src/providers/llm/llmClient.ts` | Cliente LLM genérico (API compatible OpenAI) con tools, timeout y rate limiting. |
 | **D3: Tools Deterministas** | `src/services/agentEngine.ts` | `src/services/mobilityEngine.ts` | Cotización de viajes, matriz de zonas fijas, reserva de turnos. |
 | **D4: Context & Memoria** | `src/services/contextManager.ts` | `src/services/contextManager.ts` | Ventana móvil, compresión de turnos y Progressive Disclosure. |
 | **D5: Guardrails Duros** | `src/services/guardrails.ts` | `src/services/guardrails.ts` | Grounding Lock en tarifas, filtro anti-jailbreak y denylist. |
@@ -339,8 +339,8 @@ flowchart TD
 
 | # | Recomendación Canónica | Implementación Concreta en Chatbot WS & TrasladosYa |
 |---|---|---|
-| **R1** | Iniciar con bucle lineal simple; escalar a middlewares ante políticas ortogonales. | Pipeline desacoplado Fastify: Ingesta $\rightarrow$ Contexto $\rightarrow$ Gemini $\rightarrow$ Guardrails $\rightarrow$ Outbox. |
-| **R2** | Optimización nativa de proveedor con fallback desacoplado. | SDK directo `@google/genai` con Circuit Breaker determinista ante caídas de Google. |
+| **R1** | Iniciar con bucle lineal simple; escalar a middlewares ante políticas ortogonales. | Pipeline desacoplado Fastify: Ingesta $\rightarrow$ Contexto $\rightarrow$ LLM $\rightarrow$ Guardrails $\rightarrow$ Outbox. |
+| **R2** | Abstracción de proveedor sin SDK propietario. | Cliente HTTP genérico (API compatible OpenAI) con Circuit Breaker determinista ante caídas del proveedor. |
 | **R3** | Comenzar con herramientas mínimas y ampliar solo ante fallos comprobados. | Catálogo acotado de tools (`get_zone_fare`, `request_ride`, `cancel_ride`, `escalate_human`). |
 | **R4** | Carga diferida de herramientas si el catálogo excede de 15. | Exposición contextual de herramientas según el estado de la FSM conversacional. |
 | **R5** | Edición contextual exacta por subcadenas únicas; nunca por números de línea. | Uso estricto de herramientas de edición contextual para evitar desalineación de código. |

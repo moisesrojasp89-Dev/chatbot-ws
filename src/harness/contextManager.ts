@@ -2,14 +2,14 @@ import { ContactRecord, ConversationRecord, MessageRecord } from '../types/state
 import { conversationRepository } from '../repositories/conversationRepository.js';
 import { logger } from '../utils/logger.js';
 
-export interface GeminiContentTurn {
-  role: 'user' | 'model';
+export interface LlmContentTurn {
+  role: 'user' | 'assistant';
   parts: Array<{ text: string }>;
 }
 
 export interface PreparedContext {
   systemInstruction: string;
-  contents: GeminiContentTurn[];
+  contents: LlmContentTurn[];
   summaryUpdated: boolean;
 }
 
@@ -114,9 +114,9 @@ export class ContextManager {
       }
     }
 
-    // Convertir mensajes al formato de contenido de Gemini
-    const contents: GeminiContentTurn[] = activeWindowMessages.map((msg) => ({
-      role: msg.direction === 'INBOUND' ? 'user' : 'model',
+    // Convertir mensajes al formato neutro de contenido LLM
+    const contents: LlmContentTurn[] = activeWindowMessages.map((msg) => ({
+      role: msg.direction === 'INBOUND' ? 'user' : 'assistant',
       parts: [{ text: msg.content }],
     }));
 

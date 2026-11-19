@@ -518,7 +518,7 @@ describe('Fase 5B: Inbound Durable (I18) & Pipeline de Concurrencia', { timeout:
       const claimedEv = claimed.find((e) => e.id === ev.id)!;
       expect(claimedEv).toBeDefined();
 
-      // Simular que el SDK de Gemini lanza AbortError (ej: fetch timeout interno) SIN que el servidor esté apagándose
+      // Simular que el cliente LLM lanza AbortError (ej: fetch timeout interno) SIN que el servidor esté apagándose
       vi.spyOn(agentEngine, 'processMessage').mockImplementationOnce(async () => {
         const timeoutErr = new Error('The operation was aborted due to client timeout');
         timeoutErr.name = 'AbortError';
@@ -590,7 +590,7 @@ describe('Fase 5B: Inbound Durable (I18) & Pipeline de Concurrencia', { timeout:
       const claimedEv = claimed.find((e) => e.id === ev.id)!;
       expect(claimedEv).toBeDefined();
 
-      // Simular fallo transitorio de Gemini
+      // Simular fallo transitorio del proveedor LLM
       vi.spyOn(agentEngine, 'processMessage').mockRejectedValueOnce(
         new Error('503 Service Unavailable (Overloaded)')
       );

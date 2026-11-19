@@ -216,6 +216,6 @@ El modelo **sugiere** la acción (ej: *"El cliente quiere confirmar la compra de
 Cada mensaje procesado genera una traza auditable en `audit_logs` con el desglose de tokens, latencia, herramientas llamadas y justificación del resultado.
 
 ### 8. Separación Estricta: Cerebro, Manos e Historia
-* **Cerebro (Modelo LLM):** Gemini 2.5 Flash (intercambiable).
+* **Cerebro (Modelo LLM):** proveedor configurable por entorno (`LLM_MODEL`), sin acoplamiento a un proveedor.
 * **Manos (Herramientas ACI):** Funciones de base de datos y negocio tipadas.
 * **Historia (Durable):** PostgreSQL, cola Outbox y estados FSM.

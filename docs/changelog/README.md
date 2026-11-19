@@ -11,7 +11,7 @@
 | **Hito 0 & 1** | Fundación arquitectónica, TDD normativo v2.0, C4 L1/L2, DDL Postgres | **9.3 / 10 (Aprobado)** | [`database_and_multi_tenant.md`](file:///c:/Users/indatech/Desktop/Chatbot%20WS/docs/changelog/database_and_multi_tenant.md) |
 | **Fase 1** | Webhook Gateway Fastify, Validación HMAC SHA-256, Idempotencia wamid | **Certificado (100% tests)** | [`webhook_and_meta.md`](file:///c:/Users/indatech/Desktop/Chatbot%20WS/docs/changelog/webhook_and_meta.md) |
 | **Fase 2** | DDL, Migraciones SQL, Repositorios Tipados (contacts, conversations, messages, leads) | **Certificado (8.8 / 10)** | [`database_and_multi_tenant.md`](file:///c:/Users/indatech/Desktop/Chatbot%20WS/docs/changelog/database_and_multi_tenant.md) |
-| **Fase 3** | Motor Agéntico, Gemini 2.5 Flash, Guardrails N1-N4, Grounding Lock, FSM | **Certificado (100% tests)** | [`llm_and_conversations.md`](file:///c:/Users/indatech/Desktop/Chatbot%20WS/docs/changelog/llm_and_conversations.md) |
+| **Fase 3** | Motor Agéntico con proveedor LLM configurable, Guardrails N1-N4, Grounding Lock, FSM | **Certificado (100% tests)** | [`llm_and_conversations.md`](file:///c:/Users/indatech/Desktop/Chatbot%20WS/docs/changelog/llm_and_conversations.md) |
 | **Fase 4** | Transactional Outbox Worker, Circuit Breaker Meta API, Status Updates (sent/delivered/read) | **Certificado (Auditoría B1-B3)** | [`webhook_and_meta.md`](file:///c:/Users/indatech/Desktop/Chatbot%20WS/docs/changelog/webhook_and_meta.md) |
 | **Fase 5A** | Refactorización de Arquitectura, Logging Pino, Hardening de Errores | **Certificado (Fase 5A)** | [`infra_and_deploy.md`](file:///c:/Users/indatech/Desktop/Chatbot%20WS/docs/changelog/infra_and_deploy.md) |
 | **Fase 5B** | Inbound Durable (`inbound_events`), Desacoplamiento Webhook/LLM (<200ms ACK) | **Certificado (I18)** | [`database_and_multi_tenant.md`](file:///c:/Users/indatech/Desktop/Chatbot%20WS/docs/changelog/database_and_multi_tenant.md) |
@@ -31,7 +31,7 @@
 Para consultar el registro técnico detallado sin saturación de contexto, dirígete al dominio específico:
 
 1. [**`webhook_and_meta.md`**](file:///c:/Users/indatech/Desktop/Chatbot%20WS/docs/changelog/webhook_and_meta.md): Ingesta de webhooks, verificación HMAC, deduplicación atómica, Transactional Outbox, reconciliación de status updates.
-2. [**`llm_and_conversations.md`**](file:///c:/Users/indatech/Desktop/Chatbot%20WS/docs/changelog/llm_and_conversations.md): Motor agéntico, integración Gemini, esquemas de tools, guardrails N1-N4, FSM, limitación dual RPM/TPM y coalescencia.
+2. [**`llm_and_conversations.md`**](file:///c:/Users/indatech/Desktop/Chatbot%20WS/docs/changelog/llm_and_conversations.md): Motor agéntico, integración LLM genérica, esquemas de tools, guardrails N1-N4, FSM, limitación dual RPM/TPM y coalescencia.
 3. [**`database_and_multi_tenant.md`**](file:///c:/Users/indatech/Desktop/Chatbot%20WS/docs/changelog/database_and_multi_tenant.md): Esquemas de tablas, migraciones, RLS multi-tenant, concurrencia `SKIP LOCKED`, retención y purga LGPD.
 4. [**`infra_and_deploy.md`**](file:///c:/Users/indatech/Desktop/Chatbot%20WS/docs/changelog/infra_and_deploy.md): Servidor Fastify, configuración VPS <VPS_PROVIDER>, túnel Cloudflare, Systemd, variables de entorno y observabilidad.
 
