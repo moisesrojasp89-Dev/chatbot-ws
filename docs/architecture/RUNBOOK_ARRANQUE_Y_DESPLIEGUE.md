@@ -82,6 +82,15 @@ WHERE conrelid = 'public.inbound_events'::regclass
 -- Debe incluir uq_inbound_events_channel_wamid
 ```
 
+### ✅ Ensayo desde cero (verificado 2026-11-19)
+
+En una base descartable del proyecto de pruebas se validó:
+
+- `npm run migrate` aplicó **001 → 016** (16/16) en una base vacía.
+- Una fila legada con shape Meta se backfilleó correctamente: `text`, `type`, `senderName`, `occurredAt` en UTC y `raw` = mensaje original; segunda pasada idempotente (0 filas).
+- `assertSchemaReady`, `GET /health` y `GET /ready` respondieron OK contra esa base.
+- La base descartable se eliminó al finalizar.
+
 ### ⚠️ Orden obligatorio en despliegue (single-VPS)
 
 ```bash
