@@ -16,7 +16,7 @@
 | `c191bb1` | Schema guard fail-fast (014/015/016, columnas y unicidad). | 167 tests | PASS tras endurecer tests y semántica de BD caída |
 | `b82e583` | **Ola 2:** `ChannelAdapter` verificado/parseado + sobre normalizado; migración 016. | 172 tests | Alto de despliegue (016 “en caliente”) y medios corregidos; PASS con reservas |
 | `d33488c` | Ensayo de migración `001 → 016` desde cero documentado. | 172 tests / 4-4 gate | No aplica (solo docs) |
-| `pendiente` | **Ola 2.1:** contrato completo — registry de adapters, ingestor genérico, router/challenge declarados por el adaptador y tests solo-Telegram/no-leak/ingestor. | 179 tests | PASS con reservas; reservas corregidas |
+| `9337c5a` | **Ola 2.1:** contrato completo — registry de adapters, ingestor genérico, router/challenge declarados por el adaptador y tests solo-Telegram/no-leak/ingestor. | 179 tests | PASS con reservas; residuales documentales corregidos |
 
 ### Decisiones registradas
 
