@@ -53,7 +53,7 @@ Chatbot WS/
 │   ├── INDEX.md                 # Mapa de navegación central y taxonomía documental
 │   ├── architecture/            # Diseños de arquitectura técnica, multitenancy y despliegue
 │   ├── standards_and_harness/   # Estándares de ingeniería y catálogo de errores con auto-aprendizaje
-│   │   └── self_learning_error_catalog.md # Catálogo 5-Whys y tripwires de regresión (ERR-001 a ERR-006)
+│   │   └── self_learning_error_catalog.md # Catálogo 5-Whys y tripwires de regresión (ERR-001 a ERR-008)
 │   ├── commercial_and_business/ # Análisis comercial, pricing y unit economics
 │   ├── changelog/               # Bitácora modular por componente (Webhook, LLM, DB, Infra)
 │   └── archive/                 # Expedientes de certificación, auditorías y registros históricos

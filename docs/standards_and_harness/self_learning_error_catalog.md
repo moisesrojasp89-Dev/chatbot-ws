@@ -122,6 +122,28 @@
 
 ---
 
+### [ERR-008] Pérdida del Proyecto Supabase de Pruebas y Ref Truncado en el Guard
+* **Fecha:** 2026-11-19 | **Severidad:** Alta | **Módulo:** `databaseGuard`, Infra Supabase & CI
+* **Síntoma:** El Quality Gate falló con 59 pruebas en rojo y `npm test` devolvía `(ENOTFOUND) tenant/user postgres.bsdaswbwxekfedqrzdzc not found`. Tras crear un proyecto nuevo, el workflow de keep-alive siguió fallando con `tenant/user postgres.vmlw... not found` aunque el host resolvía y el puerto 5432 respondía.
+* **Análisis 5-Whys:**
+  1. *¿Por qué fallaban todas las suites que tocan base de datos?* Porque `DATABASE_URL` apuntaba a un proyecto Supabase que ya no existía: su host `bsdaswbwxekfedqrzdzc.supabase.co` no resolvía por DNS (NXDOMAIN). No era una pausa ni un problema de red.
+  2. *¿Por qué apuntaba a un proyecto inexistente?* Porque el proyecto original se perdió al perder acceso a la cuenta/correo con que se creó el repositorio; el código se clonó a una cuenta personal, pero la base de datos y su `ref` no se reconstruyeron ni se actualizó `.env` ni el guard.
+  3. *¿Por qué el guard no lo detectó antes?* Porque `TEST_PROJECT_REF` estaba hardcodeado al ref histórico y solo comparaba subcadenas de la URL. Cualquier URL que contuviera ese ref pasaba la validación, sin verificar longitud ni existencia real del proyecto.
+  4. *¿Por qué siguió fallando tras crear el proyecto nuevo?* Porque el ref se transcribió con 19 caracteres (`vmlwqpqxzscicglyyzr`) en lugar de los 20 reales (`vmlwwqpxqzsciclgyyzr`), y el secreto de GitHub Actions conservó una variante obsoleta. Supabase responde `(ENOTFOUND) tenant/user ... not found`, un mensaje que parece de red pero significa "ese proyecto/ref no está registrado en el pooler".
+  5. *¿Qué candado permanente evita su repetición?* (a) `TEST_PROJECT_REF` parametrizado por entorno en `src/utils/databaseGuard.ts`, con fallback al ref histórico; (b) protocolo de preflight: verificar que el ref tenga 20 caracteres y que `<ref>.supabase.co` resuelva por DNS antes de migrar; (c) workflow de keep-alive que consulta la base periódicamente y falla en rojo si el proyecto desaparece o se pausa; (d) `tests/setup.ts` ejecuta `assertTestDatabase` en cada suite.
+* **Contra-Medida Permanente:**
+  - `src/utils/databaseGuard.ts`: ref exigido resuelto desde `TEST_PROJECT_REF` (fallback `DEFAULT_TEST_PROJECT_REF`), evaluado en tiempo de ejecución para que `dotenv` ya esté cargado.
+  - `src/config/env.ts` y `.env.example`: `TEST_PROJECT_REF` validado/documentado, con advertencia de no apuntar a producción.
+  - Proyecto de pruebas dedicado `chatbot-ws-test` (ref de 20 caracteres) reconstruido con las 13 migraciones, RLS en las 10 tablas y 132 pruebas en verde.
+  - `.github/workflows/supabase-keepalive.yml`: consulta `select now()` y el conteo de migraciones cada 5 días para evitar la pausa del plan FREE; requiere el secreto `SUPABASE_DB_URL` con el Session Pooler (puerto 5432).
+  - Documentación de arquitectura corregida: ya no afirma que el proyecto eliminado sigue vivo y usa Session Pooler 5432 para migraciones (`pg_advisory_lock` de sesión).
+* **Candado de Regresión (Tripwire):**
+  - `tests/setup.ts` + `assertTestDatabase`: toda suite aborta si `DATABASE_URL` no contiene el `TEST_PROJECT_REF` vigente.
+  - `.github/workflows/supabase-keepalive.yml`: falla en rojo si el tenant/proyecto deja de responder (proyecto pausado o eliminado), actuando como alarma con 5 días de antelación al umbral de pausa.
+  - Preflight manual documentado: ref de **20 caracteres** + `Resolve-DnsName <ref>.supabase.co` antes de ejecutar `npm run migrate` sobre una base nueva.
+
+---
+
 ## 📝 Plantilla para Nuevos Incidentes
 
 Ante cualquier nuevo fallo detectado en producción o tests, copia y completa el siguiente bloque:
