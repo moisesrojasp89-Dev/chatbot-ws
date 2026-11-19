@@ -161,6 +161,30 @@ describe('Fase 4: Transactional Outbox Pattern & Dispatcher', { timeout: 30000 }
     });
   });
 
+    it('reclama solo los canales permitidos (aislamiento por canal)', async () => {
+      const whatsapp = await outboxRepository.enqueueMessage({
+        conversationId,
+        phoneNumberId: 'phone_test_123',
+        recipientPhone: testPhone,
+        content: 'whatsapp permitido',
+        channel: 'whatsapp',
+      });
+      const telegram = await outboxRepository.enqueueMessage({
+        conversationId,
+        phoneNumberId: 'telegram',
+        recipientPhone: 'tg-chat-1',
+        content: 'telegram no permitido',
+        channel: 'telegram',
+      });
+
+      const claimed = await outboxRepository.claimPendingBatch(10, undefined, ['whatsapp']);
+
+      expect(claimed.map((record) => record.id)).toContain(whatsapp.id);
+      expect(claimed.map((record) => record.id)).not.toContain(telegram.id);
+
+      const none = await outboxRepository.claimPendingBatch(10, undefined, []);
+      expect(none).toEqual([]);
+    });
   describe('OutboxDispatcher Service', () => {
     it('debe procesar un mensaje pendiente, despacharlo a Meta y guardar en messages (F4-C2)', async () => {
       // Encolar mensaje en outbox

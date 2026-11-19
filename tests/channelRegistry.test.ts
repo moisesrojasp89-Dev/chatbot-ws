@@ -5,6 +5,7 @@ import { metaChannelSender } from '../src/providers/channels/meta/metaChannelSen
 import { MetaGraphApiError, whatsappClient } from '../src/providers/channels/meta/whatsappClient.js';
 import { outboxDispatcher } from '../src/services/outboxDispatcher.js';
 import { env } from '../src/config/env.js';
+import { channelCircuitBreaker, getChannelCircuitBreaker, metaCircuitBreaker } from '../src/utils/circuitBreaker.js';
 import { outboxRepository } from '../src/repositories/outboxRepository.js';
 import { OutboxRecord } from '../src/types/states.js';
 
@@ -143,6 +144,107 @@ describe('Capa de canales: registro y traducción de errores', () => {
       env.CHANNELS_ENABLED = previousChannels;
       env.TELEGRAM_BOT_TOKEN = previousToken;
       env.TELEGRAM_WEBHOOK_SECRET = previousSecret;
+    }
+  });
+  it('aísla la pausa por canal', () => {
+    outboxDispatcher.pauseChannel('telegram', 60_000);
+    expect(outboxDispatcher.isChannelPaused('telegram')).toBe(true);
+    expect(outboxDispatcher.isChannelPaused('whatsapp')).toBe(false);
+    outboxDispatcher.resume();
+  });
+  it('mantiene el alias metaCircuitBreaker apuntando al breaker de WhatsApp', () => {
+    expect(metaCircuitBreaker).toBe(channelCircuitBreaker);
+    expect(metaCircuitBreaker).toBe(getChannelCircuitBreaker('whatsapp'));
+  });
+
+  it('no llama al proveedor si el canal quedó pausado antes del dispatch', async () => {
+    outboxDispatcher.pauseChannel('whatsapp', 60_000);
+    const release = vi.spyOn(outboxRepository, 'release').mockResolvedValue(undefined as never);
+    const send = vi.spyOn(whatsappClient, 'sendTextMessage');
+    const record = {
+      id: 'outbox-paused-channel',
+      channel: 'whatsapp',
+      phone_number_id: '123',
+      recipient_phone: '57300',
+      content: 'hola',
+      lock_token: 'lock-token',
+      retry_count: 0,
+      max_retries: 3,
+    } as OutboxRecord;
+
+    try {
+      const result = await (
+        outboxDispatcher as unknown as { dispatchSingleMessage(r: OutboxRecord): Promise<string> }
+      ).dispatchSingleMessage(record);
+
+      expect(result).toBe('DEFERRED');
+      expect(release).toHaveBeenCalledWith(record.id, 'lock-token', expect.any(Number));
+      expect(release.mock.calls[0][2] as number).toBeGreaterThanOrEqual(1);
+      expect(send).not.toHaveBeenCalled();
+    } finally {
+      outboxDispatcher.resume();
+    }
+  });
+
+  it('con breaker Telegram OPEN, WhatsApp sigue despachando y Telegram se libera con delay', async () => {
+    const telegramRecord = {
+      id: 'outbox-tg-open',
+      channel: 'telegram',
+      phone_number_id: 'telegram',
+      recipient_phone: '99',
+      content: 'tg',
+      lock_token: 'tg-lock',
+      retry_count: 0,
+      max_retries: 3,
+      created_at: new Date(Date.now() - 60_000),
+    } as OutboxRecord;
+    const whatsappRecord = {
+      id: 'outbox-wa-healthy',
+      channel: 'whatsapp',
+      phone_number_id: '123',
+      recipient_phone: '57300',
+      content: 'wa',
+      lock_token: 'wa-lock',
+      retry_count: 0,
+      max_retries: 3,
+      created_at: new Date(Date.now() - 30_000),
+    } as OutboxRecord;
+
+    const telegramBreaker = getChannelCircuitBreaker('telegram');
+    for (let i = 0; i < 10; i++) {
+      await telegramBreaker
+        .execute(async () => {
+          throw new Error('503 Service Unavailable');
+        })
+        .catch(() => {});
+    }
+    expect(telegramBreaker.getState()).toBe('OPEN');
+
+    const claim = vi
+      .spyOn(outboxRepository, 'claimPendingBatch')
+      .mockResolvedValueOnce([telegramRecord, whatsappRecord]);
+    const release = vi.spyOn(outboxRepository, 'release').mockResolvedValue(undefined as never);
+    const dispatch = vi
+      .spyOn(
+        outboxDispatcher as unknown as { dispatchSingleMessage(r: OutboxRecord): Promise<string> },
+        'dispatchSingleMessage'
+      )
+      .mockResolvedValue('SENT');
+
+    try {
+      const sent = await outboxDispatcher.processNextBatch();
+
+      expect(sent).toBe(1);
+      expect(dispatch).toHaveBeenCalledTimes(1);
+      expect((dispatch.mock.calls[0][0] as OutboxRecord).channel).toBe('whatsapp');
+      expect(claim).toHaveBeenCalledWith(expect.any(Number), undefined, ['whatsapp']);
+      expect(release).toHaveBeenCalledWith('outbox-tg-open', 'tg-lock', expect.any(Number));
+      expect(release.mock.calls[0][2] as number).toBeGreaterThanOrEqual(1);
+    } finally {
+      telegramBreaker.reset();
+      claim.mockRestore();
+      release.mockRestore();
+      dispatch.mockRestore();
     }
   });
 });

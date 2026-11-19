@@ -199,9 +199,21 @@ export class CircuitBreaker {
   }
 }
 
-// Instancia singleton para el despacho saliente del canal activo
-/** Breaker del canal de salida (agnóstico al proveedor). */
-export const channelCircuitBreaker = new CircuitBreaker();
+const channelBreakers = new Map<string, CircuitBreaker>();
 
-/** @deprecated Alias de compatibilidad; usar channelCircuitBreaker. */
+/** Devuelve el breaker aislado de un canal (creándolo si no existe). */
+export function getChannelCircuitBreaker(channel: string = 'whatsapp'): CircuitBreaker {
+  const key = (channel || 'whatsapp').trim().toLowerCase() || 'whatsapp';
+  let breaker = channelBreakers.get(key);
+  if (!breaker) {
+    breaker = new CircuitBreaker();
+    channelBreakers.set(key, breaker);
+  }
+  return breaker;
+}
+
+/** Breaker por defecto del canal WhatsApp (compatibilidad). */
+export const channelCircuitBreaker = getChannelCircuitBreaker('whatsapp');
+
+/** @deprecated Alias de compatibilidad; usar getChannelCircuitBreaker(channel). */
 export const metaCircuitBreaker = channelCircuitBreaker;

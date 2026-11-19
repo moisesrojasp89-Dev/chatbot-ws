@@ -69,8 +69,16 @@ export class OutboxRepository {
    */
   public async claimPendingBatch(
     limit: number = CONSTANTS.OUTBOX.BATCH_SIZE,
-    client?: pg.PoolClient
+    client?: pg.PoolClient,
+    allowedChannels?: string[]
   ): Promise<OutboxRecord[]> {
+    // Si el llamador no permite ningún canal, no hay nada que reclamar.
+    if (allowedChannels && allowedChannels.length === 0) {
+      return [];
+    }
+
+    const channelFilter = allowedChannels ? 'AND o.channel = ANY($2::varchar[])' : '';
+    const params = allowedChannels ? [limit, allowedChannels] : [limit];
     // Auditor 5A (Bloqueante cerrado): El lock FOR UPDATE OF o SKIP LOCKED se aplica directamente
     // sobre la tabla en el SELECT de picked. En Postgres, los locks no aplican a referencias a CTEs.
     const query = `
@@ -79,6 +87,7 @@ export class OutboxRepository {
         FROM public.outbox_messages o
         WHERE o.status = 'PENDING'
           AND o.next_retry_at <= clock_timestamp()
+          ${channelFilter}
           AND NOT EXISTS (
             SELECT 1 FROM public.outbox_messages older
             WHERE older.phone_number_id = o.phone_number_id
@@ -107,8 +116,8 @@ export class OutboxRepository {
     `;
 
     const result = client
-      ? await client.query(query, [limit])
-      : await db.query(query, [limit]);
+      ? await client.query(query, params)
+      : await db.query(query, params);
 
     return result.rows as OutboxRecord[];
   }

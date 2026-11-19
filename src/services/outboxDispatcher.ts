@@ -6,7 +6,7 @@ import {
   isTransientChannelError,
   normalizeChannelName,
 } from '../providers/channels/channelTypes.js';
-import { channelCircuitBreaker, CircuitOpenError } from '../utils/circuitBreaker.js';
+import { getChannelCircuitBreaker, CircuitOpenError } from '../utils/circuitBreaker.js';
 import { typingCadence } from '../harness/typingCadence.js';
 import { CONSTANTS } from '../config/constants.js';
 import { logger } from '../utils/logger.js';
@@ -22,26 +22,51 @@ export class OutboxDispatcher {
   private isStopping: boolean = false; // Auditor 5A: Bandera de apagado en curso
   private inFlight: Promise<void> | null = null; // B2 & R2: Guarda de terminación en vuelo
   private backgroundTasks: Set<Promise<void>> = new Set(); // Auditor 5A: Tareas de persistencia en background
-  private pausedUntil: number = 0; // Auditor Point 3: Pausa global ante errores sistémicos
+  private pausedUntil: number = 0; // Pausa global explícita (todas las canales)
+  private readonly pausedUntilByChannel = new Map<string, number>();
 
   /**
-   * Auditor Point 3: Pausa globalmente el despachador por un lapso ante fallos
-   * sistémicos de credenciales o cuenta (401, 190, 131031, etc.).
+   * Pausa únicamente el canal afectado por un error sistémico o de configuración.
+   * Los demás canales siguen operando.
    */
+  public pauseChannel(channel: string, durationMs: number = 300000): void {
+    const key = normalizeChannelName(channel);
+    const until = Date.now() + durationMs;
+    this.pausedUntilByChannel.set(key, until);
+    logger.fatal(
+      { channel: key, pausedUntil: new Date(until).toISOString(), durationMinutes: durationMs / 60000 },
+      '🚨 ALERTA CRÍTICA: canal pausado por error sistémico del proveedor'
+    );
+  }
+
+  /** Pausa explícita de todos los canales (operación manual). */
   public pauseGlobal(durationMs: number = 300000): void {
     this.pausedUntil = Date.now() + durationMs;
     logger.fatal(
       { pausedUntil: new Date(this.pausedUntil).toISOString(), durationMinutes: durationMs / 60000 },
-      '🚨 ALERTA CRÍTICA: OutboxDispatcher pausado globalmente por error sistémico del proveedor de canal'
+      '🚨 ALERTA CRÍTICA: OutboxDispatcher pausado globalmente'
     );
   }
 
-  public isPaused(): boolean {
-    return Date.now() < this.pausedUntil;
+  public isChannelPaused(channel: string): boolean {
+    const key = normalizeChannelName(channel);
+    const channelUntil = this.pausedUntilByChannel.get(key) ?? 0;
+    return Date.now() < this.pausedUntil || Date.now() < channelUntil;
+  }
+
+  public isPaused(channel?: string): boolean {
+    return channel ? this.isChannelPaused(channel) : Date.now() < this.pausedUntil;
+  }
+
+  private channelPauseRemainingSeconds(channel: string): number {
+    const key = normalizeChannelName(channel);
+    const until = Math.max(this.pausedUntil, this.pausedUntilByChannel.get(key) ?? 0);
+    return Math.max(0, Math.ceil((until - Date.now()) / 1000));
   }
 
   public resume(): void {
     this.pausedUntil = 0;
+    this.pausedUntilByChannel.clear();
     this.isStopping = false;
     this.isPolling = false;
     this.inFlight = null;
@@ -139,33 +164,67 @@ export class OutboxDispatcher {
    * - Ante LEASE_LOST, el grupo se detiene de inmediato sin tocar a los hermanos (R3).
    */
   public async processNextBatch(limit: number = CONSTANTS.OUTBOX.BATCH_SIZE): Promise<number> {
-    // Auditor Point 3: Verificar pausa global por error sistémico
+    // Pausa global explícita: no se reclama nada (las pausas por canal se filtran después).
     if (Date.now() < this.pausedUntil) {
-      const remainingSec = Math.ceil((this.pausedUntil - Date.now()) / 1000);
-      logger.debug({ remainingSec }, 'OutboxDispatcher en pausa global: Omitiendo reclamo de lotes');
+      logger.debug('OutboxDispatcher en pausa global: omitiendo reclamo de lotes');
       return 0;
     }
 
-    // B1: No reclamar si el Circuit Breaker está en OPEN
-    if (channelCircuitBreaker.getState() === 'OPEN') {
-      logger.debug('Breaker en estado OPEN: Omitiendo reclamo de lote para no saturar');
+    // Claim filtrado por canales sanos: un canal caído/pausado no puede acaparar el lote.
+    const enabledChannels = channelRegistry.enabledChannels();
+    const healthyChannels = enabledChannels.filter(
+      (channel) => !this.isChannelPaused(channel) && getChannelCircuitBreaker(channel).getState() !== 'OPEN'
+    );
+    if (healthyChannels.length === 0) {
+      logger.debug({ channels: enabledChannels }, 'Todos los canales pausados/OPEN: omitiendo reclamo de lote');
       return 0;
     }
 
     // B2 & Fencing: Reclamo atómico con FOR UPDATE SKIP LOCKED
-    const records = await outboxRepository.claimPendingBatch(limit);
+    const records = await outboxRepository.claimPendingBatch(limit, undefined, healthyChannels);
     if (records.length === 0) {
       return 0;
     }
 
-    logger.debug({ count: records.length }, 'Lote de mensajes reclamado para despacho');
-
-    // I15: Agrupar por destinatario para garantizar concurrencia segura
-    const recipientGroups = new Map<string, OutboxRecord[]>();
+    // Aislamiento por canal: pausa/breaker de un canal no frena a los demás.
+    const dispatchableRecords: OutboxRecord[] = [];
     for (const record of records) {
-      const group = recipientGroups.get(record.recipient_phone) || [];
+      const channel = normalizeChannelName(record.channel);
+      const breaker = getChannelCircuitBreaker(channel);
+      const paused = this.isChannelPaused(channel);
+      if (paused || breaker.getState() === 'OPEN') {
+        const breakerDelaySeconds =
+          breaker.getState() === 'OPEN'
+            ? Math.max(1, Math.ceil((breaker.getOpenUntil() - Date.now()) / 1000))
+            : 0;
+        const delaySeconds = paused
+          ? Math.max(1, this.channelPauseRemainingSeconds(channel))
+          : breakerDelaySeconds;
+        logger.debug(
+          { outboxId: record.id, channel, delaySeconds },
+          'Mensaje omitido: canal pausado o breaker OPEN (se libera sin quemar reintentos)'
+        );
+        if (record.lock_token) {
+          await outboxRepository.release(record.id, record.lock_token, delaySeconds);
+        }
+        continue;
+      }
+      dispatchableRecords.push(record);
+    }
+
+    if (dispatchableRecords.length === 0) {
+      return 0;
+    }
+
+    logger.debug({ count: dispatchableRecords.length }, 'Lote de mensajes reclamado para despacho');
+
+    // I15: Agrupar por canal + destinatario para garantizar concurrencia segura y aislada.
+    const recipientGroups = new Map<string, OutboxRecord[]>();
+    for (const record of dispatchableRecords) {
+      const key = `${normalizeChannelName(record.channel)}:${record.recipient_phone}`;
+      const group = recipientGroups.get(key) || [];
       group.push(record);
-      recipientGroups.set(record.recipient_phone, group);
+      recipientGroups.set(key, group);
     }
 
     const groupPromises = Array.from(recipientGroups.values()).map(async (messagesForPhone) => {
@@ -268,8 +327,21 @@ export class OutboxDispatcher {
    * 5. Fase de Persistencia Local con reintentos cortos de markSent (R3).
    */
   private async dispatchSingleMessage(record: OutboxRecord): Promise<DispatchResult> {
-    // B1: Si el breaker se abrió en medio del lote, liberar sin esperar
-    if (channelCircuitBreaker.getState() === 'OPEN') {
+    const channel = normalizeChannelName(record.channel);
+
+    // M2: pausa activada en medio del lote (otro grupo u operador): no llamar al proveedor.
+    if (this.isChannelPaused(channel)) {
+      if (record.lock_token) {
+        const delaySeconds = Math.max(1, this.channelPauseRemainingSeconds(channel));
+        await outboxRepository.release(record.id, record.lock_token, delaySeconds);
+      }
+      return 'DEFERRED';
+    }
+
+    const breaker = getChannelCircuitBreaker(channel);
+
+    // B1: Si el breaker del canal se abrió en medio del lote, liberar sin esperar
+    if (breaker.getState() === 'OPEN') {
       if (record.lock_token) {
         await outboxRepository.release(
           record.id,
@@ -279,8 +351,6 @@ export class OutboxDispatcher {
       }
       return 'DEFERRED';
     }
-
-    const channel = normalizeChannelName(record.channel);
     if (!channelRegistry.isEnabled(channel)) {
       // Deshabilitar un canal es una acción reversible del operador: no se quema el mensaje.
       logger.warn({ outboxId: record.id, channel }, '⏸️ Canal no habilitado en CHANNELS_ENABLED: liberando mensaje para cuando se reactive');
@@ -323,7 +393,7 @@ export class OutboxDispatcher {
     // =========================================================================
     let externalMessageId: string;
     try {
-      const sendResult = await channelCircuitBreaker.execute(
+      const sendResult = await breaker.execute(
         async () =>
           sender.sendText({
             accountId: record.phone_number_id,
@@ -359,10 +429,10 @@ export class OutboxDispatcher {
 
       // Auditor Point 3: Errores Sistémicos de Credenciales o Cuenta (401, 190, 131031, etc.)
       if (networkError instanceof ChannelSendError && networkError.kind === 'SYSTEMIC_AUTH') {
-        this.pauseGlobal(5 * 60 * 1000); // Pausa global de 5 minutos
+        this.pauseChannel(channel, 5 * 60 * 1000); // Pausa aislada del canal
         logger.fatal(
-          { outboxId: record.id, error: errorMessage },
-          '🚨 ALERTA CRÍTICA: Error sistémico del proveedor de canal. Despachador pausado globalmente. Mensaje retenido en PENDING.'
+          { outboxId: record.id, channel, error: errorMessage },
+          `🚨 ALERTA CRÍTICA: Error sistémico del canal ${channel}. Canal pausado; mensaje retenido en PENDING.`
         );
         await outboxRepository.release(record.id, record.lock_token, 300);
         return 'DEFERRED';

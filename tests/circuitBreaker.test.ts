@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest';
-import { CircuitBreaker } from '../src/utils/circuitBreaker.js';
+import { CircuitBreaker, channelCircuitBreaker, getChannelCircuitBreaker } from '../src/utils/circuitBreaker.js';
 
 describe('Fase 4: Circuit Breaker de Red (Meta Graph API)', () => {
   let breaker: CircuitBreaker;
@@ -213,3 +213,22 @@ describe('Fase 4: Circuit Breaker de Red (Meta Graph API)', () => {
   });
 });
 
+
+describe('Breaker aislado por canal', () => {
+  it('abrir el breaker de Telegram no afecta a WhatsApp', async () => {
+    const telegramBreaker = getChannelCircuitBreaker('telegram');
+    expect(telegramBreaker).not.toBe(channelCircuitBreaker);
+
+    for (let i = 0; i < 10; i++) {
+      await telegramBreaker
+        .execute(async () => {
+          throw new Error('503 Service Unavailable');
+        })
+        .catch(() => {});
+    }
+
+    expect(telegramBreaker.getState()).toBe('OPEN');
+    expect(channelCircuitBreaker.getState()).toBe('CLOSED');
+    telegramBreaker.reset();
+  });
+});
