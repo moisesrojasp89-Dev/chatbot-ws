@@ -147,6 +147,8 @@ TELEGRAM_BOT_TOKEN=tu_token_de_telegram
 TELEGRAM_WEBHOOK_SECRET=tu_secret_token
 ```
 
+> 📘 Guía operativa completa de arranque y despliegue: [**`RUNBOOK_ARRANQUE_Y_DESPLIEGUE.md`**](docs/architecture/RUNBOOK_ARRANQUE_Y_DESPLIEGUE.md)
+
 ### 4. Migraciones de Base de Datos
 Ejecuta las migraciones incrementales (001 a 015):
 ```bash

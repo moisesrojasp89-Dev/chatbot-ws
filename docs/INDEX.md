@@ -17,6 +17,7 @@ La documentación está organizada bajo el estándar de **Modularización Jerár
 | [**`GUIA_ARQUITECTURA_Y_BUENAS_PRACTICAS.md`**](file:///c:/Users/indatech/Desktop/Chatbot%20WS/docs/architecture/GUIA_ARQUITECTURA_Y_BUENAS_PRACTICAS.md) | Manifiesto de desarrollo asistido por IA, prevención de los 10 anti-patrones en LLMs y checklist pre-producción. | L1 - Fundacional |
 | [**`DOSSIER_PROPUESTA_ARQUITECTURA_CHATBOT_WS.md`**](file:///c:/Users/indatech/Desktop/Chatbot%20WS/docs/architecture/DOSSIER_PROPUESTA_ARQUITECTURA_CHATBOT_WS.md) | Estudio de arquitectura de referencia, comparativa de canales y justificación técnica. | L1 - Estratégico |
 | [**`INFORME_DESPLIEGUE_VPS_Y_CLOUDFLARE_TUNNEL.md`**](file:///c:/Users/indatech/Desktop/Chatbot%20WS/docs/architecture/INFORME_DESPLIEGUE_VPS_Y_CLOUDFLARE_TUNNEL.md) | Certificación de aprovisionamiento en <VPS_PROVIDER> <VPS_REGION>, dominio oficial, Cloudflare Tunnel Zero Trust y systemd. | L2 - Operaciones |
+| [**`RUNBOOK_ARRANQUE_Y_DESPLIEGUE.md`**](file:///c:/Users/indatech/Desktop/Chatbot%20WS/docs/architecture/RUNBOOK_ARRANQUE_Y_DESPLIEGUE.md) | Runbook vigente: variables de entorno, migraciones, orden stop→migrate→start, webhooks Meta/Telegram, verificación y rollback. | L1 - Operaciones |
 
 ---
 

@@ -5,7 +5,9 @@
 **Proyecto:** Chatbot WS (WhatsApp Business API Platform)  
 **Autor:** Equipo de Infraestructura Cuantitativa & DevOps  
 **Destinatario:** Agente de Desarrollo & Mantenimiento de Chatbot WS  
-**Estado:** **Producción 100% Operativa y Validada en Vivo**  
+**Estado:** **Producción 100% Operativa y Validada en Vivo**
+
+> ⚠️ **Documento histórico de infraestructura (WhatsApp/Meta).** Para el arranque vigente con LLM genérico, Telegram y migración 015, usa [`RUNBOOK_ARRANQUE_Y_DESPLIEGUE.md`](RUNBOOK_ARRANQUE_Y_DESPLIEGUE.md).
 
 ---
 
@@ -137,7 +139,7 @@ WantedBy=multi-user.target
 
 La base de datos PostgreSQL se conecta a través del Transaction Pooler IPv4 de Supabase en São Paulo:
 * **Host:** `<SUPABASE_POOLER_HOST>`
-* **Puerto:** `6543`
+* **Puerto:** `5432` (Session Pooler; el 6543 no es apto para `pg_advisory_lock`)
 * **Base de Datos:** `postgres`
 * **Historial de Migraciones:** Verificado y registrado en `public.migrations_history`.
 * **Plan de Migraciones (15 archivos; 015 pendiente de ventana de mantenimiento):**

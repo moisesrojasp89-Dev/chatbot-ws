@@ -14,6 +14,7 @@
 | [**`GUIA_ARQUITECTURA_Y_BUENAS_PRACTICAS.md`**](file:///c:/Users/indatech/Desktop/Chatbot%20WS/docs/architecture/GUIA_ARQUITECTURA_Y_BUENAS_PRACTICAS.md) | Manifiesto de ingeniería, catálogo de anti-patrones en LLMs, patrones de diseño de bots de alta concurrencia. | L1 - Fundacional |
 | [**`DOSSIER_PROPUESTA_ARQUITECTURA_CHATBOT_WS.md`**](file:///c:/Users/indatech/Desktop/Chatbot%20WS/docs/architecture/DOSSIER_PROPUESTA_ARQUITECTURA_CHATBOT_WS.md) | Estudio de arquitectura de referencia, psicología conversacional, comparativas y justificación técnica. | L1 - Estratégico |
 | [**`INFORME_DESPLIEGUE_VPS_Y_CLOUDFLARE_TUNNEL.md`**](file:///c:/Users/indatech/Desktop/Chatbot%20WS/docs/architecture/INFORME_DESPLIEGUE_VPS_Y_CLOUDFLARE_TUNNEL.md) | Configuración de infraestructura en producción (<VPS_PROVIDER> VPS, Systemd, Cloudflare Tunnels, TLS/SSL). | L2 - Operaciones |
+| [**`RUNBOOK_ARRANQUE_Y_DESPLIEGUE.md`**](file:///c:/Users/indatech/Desktop/Chatbot%20WS/docs/architecture/RUNBOOK_ARRANQUE_Y_DESPLIEGUE.md) | Runbook vigente de arranque/despliegue: env, migraciones (001–015), webhooks Meta/Telegram, verificación y rollback. | L1 - Operaciones |
 
 ---
 
