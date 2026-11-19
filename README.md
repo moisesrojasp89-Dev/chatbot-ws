@@ -4,7 +4,7 @@
 [![Fastify](https://img.shields.io/badge/Fastify-4.28-black.svg)](https://fastify.dev/)
 [![Gemini 2.5 Flash](https://img.shields.io/badge/Google_GenAI-Gemini_2.5_Flash-orange.svg)](https://ai.google.dev/)
 [![PostgreSQL](https://img.shields.io/badge/PostgreSQL-16-blue.svg)](https://www.postgresql.org/)
-[![Tests](https://img.shields.io/badge/Tests-125%2F125_Passing-success.svg)](./tests)
+[![Tests](https://img.shields.io/badge/Tests-132%2F132_Passing-success.svg)](./tests)
 [![Quality Gate](https://img.shields.io/badge/Quality_Gate-Certified_100%25-success.svg)](#-quality-gate-y-certificación-institucional)
 
 Plataforma de alta velocidad y gobernanza agéntica para atención al cliente y ventas inmediatas en **WhatsApp Business Cloud API**, diseñada para el mercado corporativo de América Latina y Brasil.
@@ -31,7 +31,7 @@ $$\text{Chatbot Empresarial} = \text{Pipeline Inbound Durable} + \text{Motor LLM
    * **Presupuesto ReAct & AbortSignal:** `deadlineMs` global de 24s distribuido entre turnos para nunca exceder el lease de 30s.
    * **Readiness Probe (`GET /ready`):** Monitoreo de salud operativa para orquestadores de contenedores (Kubernetes/Docker).
 4. **Seguridad y Privacidad LGPD / GDPR:**
-   * **Row Level Security (RLS):** Habilitado en todas las tablas sensibles del esquema `public` con revocación de privilegios para roles `anon` y `authenticated` (Migraciones 001 a 012).
+   * **Row Level Security (RLS):** Habilitado en todas las tablas sensibles del esquema `public` con revocación de privilegios para roles `anon` y `authenticated` (Migraciones 001 a 013).
    * **Sanitizador Recursivo de Logs:** Enmascaramiento automático de teléfonos E.164, tokens Bearer y API keys.
 5. **Harness Agéntico & Guardrails Multi-Nivel:**
    * Grounding Lock por código (mitigación de alucinaciones de precios).
@@ -56,21 +56,23 @@ Chatbot WS/
 │   │   └── self_learning_error_catalog.md # Catálogo 5-Whys y tripwires de regresión (ERR-001 a ERR-006)
 │   ├── commercial_and_business/ # Análisis comercial, pricing y unit economics
 │   ├── changelog/               # Bitácora modular por componente (Webhook, LLM, DB, Infra)
-│   └── archive/                 # Registros históricos consolidados (sin pérdida de información)
+│   └── archive/                 # Expedientes de certificación, auditorías y registros históricos
+│       └── auditorias_fase_5b/  # Paquete DOCX de auditoría + diff de la Fase 5B
 ├── scripts/
 │   └── tools/
-│       └── chatbot_quality_gate.ts # Script determinista de certificación Quality Gate
+│       ├── chatbot_quality_gate.ts # Script determinista de certificación Quality Gate
+│       └── build_auditor_docx.py   # Generador del paquete DOCX de auditoría (docs/archive)
 ├── src/
 │   ├── config/                  # Constantes y variables de entorno validadas con Zod
 │   ├── controllers/             # Gateway Webhook Meta con HMAC SHA-256 y reconciliación de estados
-│   ├── database/                # Migraciones DDL SQL (001 a 012) y runner automatizado
+│   ├── database/                # Migraciones DDL SQL (001 a 013) y runner automatizado
 │   ├── harness/                 # Motor Agéntico, Context Manager, Tools y Guardrails
 │   ├── middleware/              # Rate Limiter Token Bucket por teléfono
 │   ├── providers/               # Clientes externos (PostgreSQL, Gemini 2.5 Flash, Meta Graph API)
 │   ├── repositories/            # Repositorios SQL (Inbound, Outbox, Contact, Conversation, Message, etc.)
 │   ├── services/                # Daemons asíncronos (InboundDispatcher, OutboxDispatcher, RetentionService)
 │   └── utils/                   # Circuit Breaker, crypto HMAC, logger estructurado con sanitizador PII
-└── tests/                       # Suite de 14 archivos de pruebas con Vitest (125/125 passing)
+└── tests/                       # Suite de 15 archivos de pruebas con Vitest (132/132 passing)
 ```
 
 ---
@@ -87,7 +89,7 @@ El script ejecuta 4 verificaciones deterministas:
 1. **Compilación TypeScript AST:** `tsc --noEmit` (0 errores, 0 advertencias, prohibido `any` indiscriminado).
 2. **Escaneo Zero-Trust:** Inspección exhaustiva contra tokens reales de Meta, API keys de Gemini y credenciales en texto plano.
 3. **Integridad de Configuración & Harness:** Validación bidireccional entre `.env.example`, `.gitignore`, `src/config/env.ts`, `AGENTS.md` y `GEMINI.md`.
-4. **Suite Completa de Pruebas Unitarias/Integración:** `vitest run` ejecutando las 125 pruebas automatizadas al 100%.
+4. **Suite Completa de Pruebas Unitarias/Integración:** `vitest run` ejecutando las 132 pruebas automatizadas al 100%.
 
 ---
 
@@ -111,7 +113,7 @@ cp .env.example .env
 ```
 
 ### 4. Migraciones de Base de Datos
-Ejecuta las migraciones incrementales (001 a 012):
+Ejecuta las migraciones incrementales (001 a 013):
 ```bash
 npm run migrate
 ```

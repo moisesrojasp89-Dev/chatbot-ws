@@ -13,6 +13,9 @@ const envSchema = z.object({
   GEMINI_API_KEY: z.string().min(10, 'GEMINI_API_KEY requerida'),
   META_PHONE_NUMBER_ID: z.string().default('123456789012345'),
   DATABASE_URL: z.string().min(10, 'DATABASE_URL requerida para persistencia e idempotencia'),
+  // Ref del proyecto Supabase dedicado a pruebas (ver src/utils/databaseGuard.ts).
+  // Opcional: si no se define, el guard usa DEFAULT_TEST_PROJECT_REF.
+  TEST_PROJECT_REF: z.string().optional(),
 });
 
 const parsedEnv = envSchema.safeParse(process.env);

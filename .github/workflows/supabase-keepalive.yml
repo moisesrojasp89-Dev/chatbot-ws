@@ -1,0 +1,61 @@
+name: Supabase Keep-Alive
+
+# Mantiene con actividad el proyecto Supabase del plan FREE para evitar que se
+# pause automáticamente tras 7 días sin uso.
+#
+# Requisito: crear el secreto de repositorio SUPABASE_DB_URL con la cadena del
+# **Session Pooler** (puerto 5432, IPv4), por ejemplo:
+#   postgresql://postgres.<REF>:<PASSWORD>@aws-1-us-east-1.pooler.supabase.com:5432/postgres?sslmode=require
+# Si la contraseña tiene caracteres especiales (@ : / # % ? [ ]), percent-encodearlos.
+#
+# Nota: GitHub desactiva los workflows programados tras 60 días sin actividad en
+# el repositorio. Si eso ocurre, vuelve a habilitarlo desde la pestaña Actions.
+
+on:
+  schedule:
+    # Días 1, 6, 11, 16, 21, 26 y 31 de cada mes a las 03:00 UTC.
+    # Nunca transcurren más de 6 días entre ejecuciones, por debajo del umbral
+    # de pausa de 7 días de Supabase.
+    - cron: '0 3 */5 * *'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: supabase-keepalive
+  cancel-in-progress: false
+
+jobs:
+  keepalive:
+    name: Ping a PostgreSQL (Session Pooler)
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+
+    steps:
+      - name: Verificar que exista el secreto SUPABASE_DB_URL
+        env:
+          SUPABASE_DB_URL: ${{ secrets.SUPABASE_DB_URL }}
+        run: |
+          if [ -z "$SUPABASE_DB_URL" ]; then
+            echo "::error::Falta el secreto SUPABASE_DB_URL. Configúralo en Settings → Secrets and variables → Actions con la cadena del Session Pooler (puerto 5432)."
+            exit 1
+          fi
+
+      - name: Instalar cliente PostgreSQL si no está disponible
+        run: |
+          command -v psql >/dev/null || (
+            sudo apt-get update -qq &&
+            sudo apt-get install -y -qq postgresql-client
+          )
+
+      - name: Ejecutar consulta de actividad
+        env:
+          SUPABASE_DB_URL: ${{ secrets.SUPABASE_DB_URL }}
+          PGSSLMODE: require
+          PGCONNECT_TIMEOUT: 15
+        run: |
+          psql "$SUPABASE_DB_URL" -v ON_ERROR_STOP=1 \
+            -c "select now() as keepalive_at, current_database() as database;"
+          psql "$SUPABASE_DB_URL" -v ON_ERROR_STOP=1 \
+            -c "select count(*) as migraciones_aplicadas from public.migrations_history;"

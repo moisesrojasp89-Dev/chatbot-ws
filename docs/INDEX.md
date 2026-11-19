@@ -57,16 +57,21 @@ La documentación está organizada bajo el estándar de **Modularización Jerár
 
 ---
 
-## 📦 5. Archivo Histórico & Expedientes Pasados
-📂 [**`docs/archive/`**](file:///c:/Users/indatech/Desktop/Chatbot%20WS/docs/archive/)
+## 📦 5. Archivo Histórico, Expedientes y Auditorías
+📂 [**`docs/archive/`**](file:///c:/Users/indatech/Desktop/Chatbot%20WS/docs/archive/README.md)
 
-- [**`CHATBOT_CHANGELOG_MONOLITH_LEGACY.md`**](file:///c:/Users/indatech/Desktop/Chatbot%20WS/docs/archive/CHATBOT_CHANGELOG_MONOLITH_LEGACY.md): Bitácora histórica monolítica original (~50 KB) preservada intacta para auditoría retroactiva.
-- **Expedientes de Certificación de Fases Previas:**
-  - `DICTAMEN_FINAL_FASE_5C.md`
-  - `CIERRE_DE_PROYECTO_LISTO_PARA_PRODUCCION.md`
-  - `PLAN_IMPLEMENTACION_FASE_5C.md`
-  - `DIFF_SUBSANACION_AUDITORIA_FASE_4.md`
-  - `DOSSIER_CODE_REVIEW_FASE_4.md`
+| Documento | Descripción / Alcance | Fase |
+| :--- | :--- | :---: |
+| [**`auditorias_fase_5b/`**](file:///c:/Users/indatech/Desktop/Chatbot%20WS/docs/archive/auditorias_fase_5b/README.md) | Paquete de auditoría entregado al auditor externo: partes 1–4 en DOCX, expediente consolidado y diff íntegro de la Fase 5B. | Fase 5B |
+| [**`EXPEDIENTE_CERTIFICACION_FASE_5B.md`**](file:///c:/Users/indatech/Desktop/Chatbot%20WS/docs/archive/EXPEDIENTE_CERTIFICACION_FASE_5B.md) | Certificación de Inbound Durable (I18) y RLS/PII (I20): resolución de las 6 observaciones del auditor con código fuente completo. | Fase 5B |
+| [**`EXPEDIENTE_CERTIFICACION_FASE_5C.md`**](file:///c:/Users/indatech/Desktop/Chatbot%20WS/docs/archive/EXPEDIENTE_CERTIFICACION_FASE_5C.md) | Certificación de escala: Sliding Worker Pool, Rate Limiter Dual RPM/TPM, coalescencia y retención LGPD (125/125 tests). | Fase 5C |
+| [**`WALKTHROUGH_FASE_5C.md`**](file:///c:/Users/indatech/Desktop/Chatbot%20WS/docs/archive/WALKTHROUGH_FASE_5C.md) | Walkthrough de implementación de la Fase 5C con la trazabilidad de las observaciones C1–C13. | Fase 5C |
+| [**`DICTAMEN_FINAL_FASE_5C.md`**](file:///c:/Users/indatech/Desktop/Chatbot%20WS/docs/archive/DICTAMEN_FINAL_FASE_5C.md) | Dictamen final del arquitecto auditor sobre la Fase 5C. | Fase 5C |
+| [**`PLAN_IMPLEMENTACION_FASE_5C.md`**](file:///c:/Users/indatech/Desktop/Chatbot%20WS/docs/archive/PLAN_IMPLEMENTACION_FASE_5C.md) | Plan de implementación original de la Fase 5C. | Fase 5C |
+| [**`CIERRE_DE_PROYECTO_LISTO_PARA_PRODUCCION.md`**](file:///c:/Users/indatech/Desktop/Chatbot%20WS/docs/archive/CIERRE_DE_PROYECTO_LISTO_PARA_PRODUCCION.md) | Acta de cierre del proyecto y declaración de readiness para producción. | Cierre |
+| [**`DIFF_SUBSANACION_AUDITORIA_FASE_4.md`**](file:///c:/Users/indatech/Desktop/Chatbot%20WS/docs/archive/DIFF_SUBSANACION_AUDITORIA_FASE_4.md) | Diff de subsanación de las observaciones de auditoría de la Fase 4. | Fase 4 |
+| [**`DOSSIER_CODE_REVIEW_FASE_4.md`**](file:///c:/Users/indatech/Desktop/Chatbot%20WS/docs/archive/DOSSIER_CODE_REVIEW_FASE_4.md) | Dossier de code review de la Fase 4 (Outbox, status updates, hardening). | Fase 4 |
+| [**`CHATBOT_CHANGELOG_MONOLITH_LEGACY.md`**](file:///c:/Users/indatech/Desktop/Chatbot%20WS/docs/archive/CHATBOT_CHANGELOG_MONOLITH_LEGACY.md) | Bitácora histórica monolítica original (~50 KB) preservada intacta para auditoría retroactiva. | Hitos 0–5A |
 
 ---
 

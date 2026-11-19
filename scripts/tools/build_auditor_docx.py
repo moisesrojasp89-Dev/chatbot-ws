@@ -1,9 +1,23 @@
 import os
+from pathlib import Path
+
 import docx
 from docx.shared import Pt, RGBColor, Inches
 from docx.enum.text import WD_ALIGN_PARAGRAPH
 from docx.oxml import parse_xml, OxmlElement
 from docx.oxml.ns import nsdecls, qn
+
+# Rutas ancladas a la raíz del repositorio: el script puede ejecutarse desde cualquier CWD.
+ROOT_DIR = Path(__file__).resolve().parents[2]
+OUTPUT_DIR = ROOT_DIR / "docs" / "archive" / "auditorias_fase_5b"
+
+
+def save_doc(doc, filename):
+    """Persiste el DOCX dentro del paquete de auditoría histórico (docs/archive/auditorias_fase_5b)."""
+    OUTPUT_DIR.mkdir(parents=True, exist_ok=True)
+    output_path = OUTPUT_DIR / filename
+    doc.save(str(output_path))
+    print(f"Guardado: {output_path.relative_to(ROOT_DIR)}")
 
 def set_cell_background(cell, fill_hex):
     tcPr = cell._tc.get_or_add_tcPr()
@@ -36,12 +50,16 @@ def add_code_block(doc, title, file_path, highlight_notes=None):
         run_notes.font.color.rgb = RGBColor(0x00, 0x66, 0x33)
         p_notes.paragraph_format.space_after = Pt(6)
 
-    # Read content
-    if not os.path.exists(file_path):
+    # Read content (las rutas relativas se resuelven contra la raíz del repo, no contra el CWD)
+    source_path = Path(file_path)
+    if not source_path.is_absolute():
+        source_path = ROOT_DIR / source_path
+
+    if not source_path.exists():
         doc.add_paragraph(f"Error: No se encontró el archivo {file_path}")
         return
 
-    with open(file_path, "r", encoding="utf-8") as f:
+    with open(source_path, "r", encoding="utf-8") as f:
         code_text = f.read()
 
     # Table with 1 cell for code background
@@ -122,8 +140,7 @@ def build_part1():
         "src/services/inboundDispatcher.ts",
         "Punto 1 (LLM Breaker, error transitorio vs permanente, fallback message y alerta INBOUND_TERMINAL_FAILURE). Punto 3 (efectos secundarios diferidos de lead/handoff ejecutados dentro de la transacción)."
     )
-    doc.save("AUDITORIA_5B_PARTE_1_DISPATCHER_Y_REPOSITORY.docx")
-    print("Guardado: AUDITORIA_5B_PARTE_1_DISPATCHER_Y_REPOSITORY.docx")
+    save_doc(doc, "AUDITORIA_5B_PARTE_1_DISPATCHER_Y_REPOSITORY.docx")
 
 def build_part2():
     doc = create_doc(
@@ -148,8 +165,7 @@ def build_part2():
         "src/providers/llm/geminiClient.ts",
         "Punto 2: Timeout de 20s claramente menor al lease de 30s. Helper isTransientLlmError() para discriminar 5xx/429/timeout de errores 4xx de usuario."
     )
-    doc.save("AUDITORIA_5B_PARTE_2_WEBHOOK_SERVER_Y_LLM.docx")
-    print("Guardado: AUDITORIA_5B_PARTE_2_WEBHOOK_SERVER_Y_LLM.docx")
+    save_doc(doc, "AUDITORIA_5B_PARTE_2_WEBHOOK_SERVER_Y_LLM.docx")
 
 def build_part3():
     doc = create_doc(
@@ -186,8 +202,7 @@ def build_part3():
         "src/utils/logger.ts",
         "Criterio 6 (I20): Sanitización de PII, redactando teléfonos a 55119****0001, tokens a [REDACTED], y purgando queries/parámetros en errores de Postgres."
     )
-    doc.save("AUDITORIA_5B_PARTE_3_MIGRACIONES_Y_LOGGER.docx")
-    print("Guardado: AUDITORIA_5B_PARTE_3_MIGRACIONES_Y_LOGGER.docx")
+    save_doc(doc, "AUDITORIA_5B_PARTE_3_MIGRACIONES_Y_LOGGER.docx")
 
 def build_part4():
     doc = create_doc(
@@ -206,8 +221,7 @@ def build_part4():
         "tests/rlsAndLogger.test.ts",
         "Punto 5 y 6: Verificación de rowsecurity = true en 100% de tablas públicas, bloqueo a anon y authenticated, y captura de stream de logs sin fugas de PII."
     )
-    doc.save("AUDITORIA_5B_PARTE_4_TESTS_MUTACION_ROLLBACK_RLS.docx")
-    print("Guardado: AUDITORIA_5B_PARTE_4_TESTS_MUTACION_ROLLBACK_RLS.docx")
+    save_doc(doc, "AUDITORIA_5B_PARTE_4_TESTS_MUTACION_ROLLBACK_RLS.docx")
 
 def build_complete():
     doc = create_doc(
@@ -295,8 +309,7 @@ def build_complete():
         "Punto 5 y 6: Verificación de rowsecurity = true en 100% de tablas públicas, bloqueo a anon y authenticated, y captura de stream de logs sin fugas de PII."
     )
 
-    doc.save("AUDITORIA_FASE_5B_COMPLETO.docx")
-    print("Guardado: AUDITORIA_FASE_5B_COMPLETO.docx")
+    save_doc(doc, "AUDITORIA_FASE_5B_COMPLETO.docx")
 
 if __name__ == "__main__":
     print("Generando documentos DOCX para el auditor...")

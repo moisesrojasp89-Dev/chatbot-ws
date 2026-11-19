@@ -17,6 +17,13 @@
 | **Fase 5B** | Inbound Durable (`inbound_events`), Desacoplamiento Webhook/LLM (<200ms ACK) | **Certificado (I18)** | [`database_and_multi_tenant.md`](file:///c:/Users/indatech/Desktop/Chatbot%20WS/docs/changelog/database_and_multi_tenant.md) |
 | **Fase 5C** | Escala Empresarial: Sliding Worker Pool, Rate Limiter Dual (RPM/TPM), Coalescencia | **Dictamen Final Verde** | [`llm_and_conversations.md`](file:///c:/Users/indatech/Desktop/Chatbot%20WS/docs/changelog/llm_and_conversations.md) |
 
+## 📑 Expedientes de Certificación Vinculados
+
+| Fase | Expediente Oficial | Evidencia Complementaria |
+| :---: | :--- | :--- |
+| **5B** | [`EXPEDIENTE_CERTIFICACION_FASE_5B.md`](file:///c:/Users/indatech/Desktop/Chatbot%20WS/docs/archive/EXPEDIENTE_CERTIFICACION_FASE_5B.md) | Paquete DOCX y diff del auditor en [`docs/archive/auditorias_fase_5b/`](file:///c:/Users/indatech/Desktop/Chatbot%20WS/docs/archive/auditorias_fase_5b/README.md). |
+| **5C** | [`EXPEDIENTE_CERTIFICACION_FASE_5C.md`](file:///c:/Users/indatech/Desktop/Chatbot%20WS/docs/archive/EXPEDIENTE_CERTIFICACION_FASE_5C.md) | [`WALKTHROUGH_FASE_5C.md`](file:///c:/Users/indatech/Desktop/Chatbot%20WS/docs/archive/WALKTHROUGH_FASE_5C.md) y [`DICTAMEN_FINAL_FASE_5C.md`](file:///c:/Users/indatech/Desktop/Chatbot%20WS/docs/archive/DICTAMEN_FINAL_FASE_5C.md). |
+
 ---
 
 ## 📂 Bitácoras Modulares por Dominio Técnico

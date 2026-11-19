@@ -10,13 +10,13 @@ Para evitar archivos monolíticos y garantizar que cualquier desarrollador o IA 
 
 ```text
 Chatbot WS/
-├── docs/                        # Documentación viva, arquitectura y bitácora
-│   ├── INDEX.md
-│   ├── GUIA_ARQUITECTURA_Y_BUENAS_PRACTICAS.md
-│   ├── ENGINEERING_STANDARDS.md
-│   ├── GUIA_HARNESS_CHATBOT.md
-│   ├── CONVENTIONS.md
-│   └── CHANGELOG_BITACORA.md
+├── docs/                        # Documentación modular por dominio
+│   ├── INDEX.md                 # Mapa central de navegación documental
+│   ├── architecture/            # TDD, multitenancy, despliegue y operaciones
+│   ├── standards_and_harness/   # Normas de ingeniería, harness y auto-aprendizaje
+│   ├── changelog/               # Bitácoras modulares por componente
+│   ├── commercial_and_business/ # Pricing, unit economics y propuestas
+│   └── archive/                 # Expedientes, auditorías y registros históricos
 ├── src/
 │   ├── config/                  # Constantes, configuración tipada y variables (.env)
 │   │   ├── env.js / env.ts      # Validación estricta de variables de entorno (Zod / Joi)
@@ -54,9 +54,26 @@ Chatbot WS/
 │   └── evals/                   # Conversaciones de prueba sintéticas
 ├── .env.example                 # Plantilla pública de variables de entorno
 ├── .gitignore                   # Exclusiones de Git (cero credenciales)
+├── AGENTS.md                    # Mandato institucional para agentes de IA
+├── GEMINI.md                    # Espejo de directivas operativas (Antigravity/Gemini)
 ├── package.json                 # Dependencias y scripts de ejecución
 └── README.md                    # Introducción rápida y puesta en marcha
 ```
+
+### 1.1 Regla de Ubicación Documental (raíz limpia)
+
+La raíz del repositorio solo aloja configuración y puntos de entrada (`README.md`, `AGENTS.md`, `GEMINI.md`, `package.json`, `tsconfig.json`, `.env.example`, `.gitignore`). Toda la documentación vive en `docs/`:
+
+| Tipo de documento | Ubicación obligatoria |
+| :--- | :--- |
+| Diseño, arquitectura y operaciones | `docs/architecture/` |
+| Normas, harness y auto-aprendizaje | `docs/standards_and_harness/` |
+| Bitácoras modulares por componente | `docs/changelog/` |
+| Negocio, pricing y propuestas | `docs/commercial_and_business/` |
+| Expedientes de certificación, auditorías, diffs y walkthroughs históricos | `docs/archive/` (paquete propio si incluye DOCX/PDF) |
+| Generadores de entregables documentales | `scripts/tools/` |
+
+**Prohibido** depositar auditorías, `.docx`, diffs o expedientes en la raíz: además de ensuciar el repositorio, rompen la modularización y el descubrimiento jerárquico del harness. Todo documento histórico nuevo debe quedar enlazado desde [`docs/archive/README.md`](file:///c:/Users/indatech/Desktop/Chatbot%20WS/docs/archive/README.md) y [`docs/INDEX.md`](file:///c:/Users/indatech/Desktop/Chatbot%20WS/docs/INDEX.md).
 
 ---
 

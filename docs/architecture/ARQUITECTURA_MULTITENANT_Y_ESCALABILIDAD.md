@@ -10,13 +10,15 @@
 
 ### **Respuesta Definitiva: NO, esa base de datos no se toca para clientes reales.**
 
-La base de datos que tenemos configurada actualmente en Supabase São Paulo (`db.bsdaswbwxekfedqrzdzc...`) es nuestra **Base de Datos Maestra de Desarrollo, Pruebas y Certificación (Staging/Dev)**:
+La base de datos de desarrollo, pruebas y certificación es un **proyecto Supabase dedicado** (Staging/Dev), separado de cualquier base de clientes reales y configurado mediante `DATABASE_URL` + `TEST_PROJECT_REF`:
+
+> **Nota de vigencia:** el proyecto histórico en São Paulo (`bsdaswbwxekfedqrzdzc`) fue eliminado de Supabase. Su ref ya no resuelve por DNS, por lo que el ref del proyecto de pruebas se configura con la variable `TEST_PROJECT_REF` (ver `src/utils/databaseGuard.ts`). El guard exige que `DATABASE_URL` pertenezca a ese ref antes de correr tests o migraciones.
 
 ```text
 ┌────────────────────────────────────────────────────────────────────────┐
-│  BASE DE DATOS ACTUAL (Staging / Dev - Supabase São Paulo)             │
+│  BASE DE DATOS DE PRUEBAS (Staging / Dev - proyecto Supabase dedicado) │
 │  • Es nuestro "laboratorio" de ingeniería.                             │
-│  • Aquí corren los 68 tests automatizados.                             │
+│  • Aquí corren los 132 tests automatizados.                            │
 │  • Aquí probamos migraciones SQL antes de aplicarlas a clientes.       │
 │  • Contiene datos de prueba y mocks de Meta.                           │
 │  ⚠️ NUNCA se mezcla con clientes reales ni con ventas comerciales.     │
@@ -65,8 +67,9 @@ Para las empresas que contraten el servicio, la privacidad de datos es sagrada (
   * Ejemplo: `prod-dealer-brasil`
 * En la terminal ejecutas la migración automática:
   ```bash
-  DATABASE_URL="postgres://<USER>:<PASSWORD>@<SUPABASE_POOLER>:6543/postgres" npm run migrate
+  DATABASE_URL="postgres://<USER>:<PASSWORD>@<SUPABASE_POOLER>:5432/postgres" npm run migrate
   ```
+  Usa el **Session Pooler (puerto 5432)**: las migraciones toman un `pg_advisory_lock` de sesión y el Transaction Pooler (6543) no garantiza estado de sesión.
 * En 10 segundos, ese nuevo proyecto de Supabase tiene creadas todas las tablas (`contacts`, `conversations`, `messages`, `outbox_messages`, etc.) completamente vacías y listas para ese cliente.
 
 ---
