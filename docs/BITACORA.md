@@ -17,7 +17,7 @@
 | `b82e583` | **Ola 2:** `ChannelAdapter` verificado/parseado + sobre normalizado; migración 016. | 172 tests | Alto de despliegue (016 “en caliente”) y medios corregidos; PASS con reservas |
 | `d33488c` | Ensayo de migración `001 → 016` desde cero documentado. | 172 tests / 4-4 gate | No aplica (solo docs) |
 | `9337c5a` | **Ola 2.1:** contrato completo — registry de adapters, ingestor genérico, router/challenge declarados por el adaptador y tests solo-Telegram/no-leak/ingestor. | 179 tests | PASS con reservas; residuales documentales corregidos |
-| `pendiente` | **Ola 3A:** alertas `CHANNEL_BACKLOG` con dedupe, snapshot por canal y `/health` informativo; sin `/ready` para outbox. | 184 tests | Pendiente de cierre |
+| `3b063f8` | **Ola 3A:** alertas `CHANNEL_BACKLOG` con dedupe, snapshot por canal y `/health` informativo; sin `/ready` para outbox. | 184 tests | PASS con reservas; residuales corregidos |
 
 ### Decisiones registradas
 
@@ -47,6 +47,7 @@
 | Telegram solo texto | Pendiente |
 | Migración no concurrente en tablas calientes | Aceptado |
 | Integración de alertas con on-call externo | Pendiente |
+| Índice parcial para conteo de backlog | Aceptado |
 | Tests `buildApp()` solo-Telegram y no-leak | Pendiente |
 
 ---
