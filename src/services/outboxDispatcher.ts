@@ -10,6 +10,7 @@ import { getChannelCircuitBreaker, CircuitOpenError } from '../utils/circuitBrea
 import { typingCadence } from '../harness/typingCadence.js';
 import { CONSTANTS } from '../config/constants.js';
 import { env } from '../config/env.js';
+import { sendOnCallAlert } from './alertNotifier.js';
 import { logger } from '../utils/logger.js';
 import { OutboxRecord } from '../types/states.js';
 
@@ -86,7 +87,11 @@ export class OutboxDispatcher {
       counts.set(key, (counts.get(key) ?? 0) + row.pending);
     }
 
-    const channels = new Set<string>([...channelRegistry.enabledChannels(), ...counts.keys()]);
+    const channels = new Set<string>([
+      ...channelRegistry.enabledChannels(),
+      ...counts.keys(),
+      ...this.lastBacklogAlerts.keys(),
+    ]);
 
     return Array.from(channels).map((channel) => ({
       channel,
@@ -113,21 +118,41 @@ export class OutboxDispatcher {
       for (const item of snapshot) {
         const needsAlert = !item.enabled || item.paused || item.breakerState !== 'CLOSED';
 
-        if (!needsAlert || item.pending === 0) {
+        // Solo se resuelve cuando el backlog llega a cero; un canal sano con
+        // filas aún pendientes no debe enviar un "resuelto" prematuro.
+        if (item.pending === 0) {
           if (this.lastBacklogAlerts.has(item.channel)) {
-            this.lastBacklogAlerts.delete(item.channel);
-            logger.info(
-              { alert: 'CHANNEL_BACKLOG_RESOLVED', channel: item.channel, pending: item.pending },
-              `✅ Backlog normalizado en canal ${item.channel}`
-            );
+            const delivered = await sendOnCallAlert({
+              alert: 'CHANNEL_BACKLOG_RESOLVED',
+              channel: item.channel,
+              pending: item.pending,
+              threshold: item.threshold,
+              enabled: item.enabled,
+              paused: item.paused,
+              breakerState: item.breakerState,
+            });
+
+            if (delivered) {
+              this.lastBacklogAlerts.delete(item.channel);
+              logger.info(
+                { alert: 'CHANNEL_BACKLOG_RESOLVED', channel: item.channel, pending: item.pending },
+                `✅ Backlog drenado en canal ${item.channel}`
+              );
+            } else {
+              logger.warn(
+                { alert: 'CHANNEL_BACKLOG_RESOLVED', channel: item.channel },
+                'No se pudo entregar la resolución al webhook de on-call; se reintentará'
+              );
+            }
           }
           continue;
         }
 
+        if (!needsAlert) continue;
+
         const level = item.pending >= item.threshold ? 'error' : 'warn';
         const signature = `${level}:${item.enabled}:${item.paused}:${item.breakerState}`;
         if (this.lastBacklogAlerts.get(item.channel) === signature) continue;
-        this.lastBacklogAlerts.set(item.channel, signature);
 
         const alert = {
           alert: 'CHANNEL_BACKLOG' as const,
@@ -144,6 +169,25 @@ export class OutboxDispatcher {
           logger.error(alert, message);
         } else {
           logger.warn(alert, message);
+        }
+
+        const delivered = await sendOnCallAlert({
+          alert: 'CHANNEL_BACKLOG',
+          channel: item.channel,
+          pending: item.pending,
+          threshold: item.threshold,
+          enabled: item.enabled,
+          paused: item.paused,
+          breakerState: item.breakerState,
+        });
+
+        if (delivered) {
+          this.lastBacklogAlerts.set(item.channel, signature);
+        } else {
+          logger.warn(
+            { alert: 'CHANNEL_BACKLOG', channel: item.channel },
+            'No se pudo entregar la alerta al webhook de on-call; se reintentará'
+          );
         }
       }
 

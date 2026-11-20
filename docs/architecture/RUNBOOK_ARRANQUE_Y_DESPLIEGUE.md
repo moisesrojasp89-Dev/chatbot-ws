@@ -32,6 +32,7 @@ Copia `.env.example` a `.env` y completa:
 | `LLM_MODEL` | `gpt-4o-mini` | Modelo con soporte de function calling |
 | `CHANNELS_ENABLED` | `whatsapp` o `whatsapp,telegram` | Canales activos; cada uno exige su configuración |
 | `BACKLOG_ALERT_THRESHOLD` | `100` | Desde este umbral el log `CHANNEL_BACKLOG` pasa de `warn` a `error` |
+| `ALERT_WEBHOOK_URL` | `https://hooks.slack.com/...` | Opcional: recibe transiciones `CHANNEL_BACKLOG` por POST HTTPS; sin redirects, timeout 5s |
 
 ### Por canal
 
@@ -145,9 +146,10 @@ El adaptador valida `X-Telegram-Bot-Api-Secret-Token` y responde `200` tras pers
 ### 6.1 Observabilidad de backlog
 
 - `CHANNEL_BACKLOG` (warn/error) aparece cuando un canal deshabilitado, pausado o con breaker distinto de `CLOSED` tiene filas `PENDING`.
-- El log incluye `channel`, `pending`, `threshold`, `enabled`, `paused` y `breakerState`; se deduplica por transición y emite `CHANNEL_BACKLOG_RESOLVED` al normalizarse.
+- El log incluye `channel`, `pending`, `threshold`, `enabled`, `paused` y `breakerState`; se deduplica por transición y emite `CHANNEL_BACKLOG_RESOLVED` cuando el backlog llega a 0.
 - `GET /health` incluye `outbox: "ok" | "paused"` como dato informativo. **`/ready` no depende de la pausa del outbox**: sacar la instancia de rotación por un problema de egress provocaría un restart-loop que perdería webhooks que el inbound sí puede procesar.
 - La pausa global del outbox es una operación interna (no hay endpoint público); la pausa por canal (error sistémico) se refleja en `CHANNEL_BACKLOG`.
+- Si `ALERT_WEBHOOK_URL` está definido, cada transición (alerta o resolución) se POSTea; si el webhook falla, se reintenta en el siguiente ciclo (timeout 5s, sin backoff ni tope). Sin URL solo hay logs.
 
 ---
 

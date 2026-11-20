@@ -235,7 +235,110 @@ describe('Fase 4: Transactional Outbox Pattern & Dispatcher', { timeout: 30000 }
     });
 
   describe('OutboxDispatcher Service', () => {
+    it('reintenta la alerta si el webhook falla y no duplica al recuperarse', async () => {
+      const previousUrl = env.ALERT_WEBHOOK_URL;
+      const previousChannels = env.CHANNELS_ENABLED;
+      env.ALERT_WEBHOOK_URL = 'https://hooks.example.test/alert';
+      env.CHANNELS_ENABLED = 'whatsapp';
+      const fetchMock = vi
+        .fn()
+        .mockRejectedValueOnce(new Error('ECONNREFUSED'))
+        .mockResolvedValue({ ok: true, status: 200 });
+      vi.stubGlobal('fetch', fetchMock);
+
+      await outboxRepository.enqueueMessage({
+        conversationId,
+        phoneNumberId: 'telegram',
+        recipientPhone: 'tg-retry',
+        content: 'tg retry',
+        channel: 'telegram',
+      });
+      outboxDispatcher.pauseChannel('telegram', 60_000);
+
+      try {
+        await outboxDispatcher.checkChannelBacklog();
+        expect(fetchMock).toHaveBeenCalledTimes(1);
+
+        await outboxDispatcher.checkChannelBacklog();
+        expect(fetchMock).toHaveBeenCalledTimes(2);
+
+        await outboxDispatcher.checkChannelBacklog();
+        expect(fetchMock).toHaveBeenCalledTimes(2);
+      } finally {
+        outboxDispatcher.resume();
+        env.ALERT_WEBHOOK_URL = previousUrl;
+        env.CHANNELS_ENABLED = previousChannels;
+        vi.unstubAllGlobals();
+      }
+    });
+    it('emite RESOLVED solo cuando el backlog llega a cero', async () => {
+      const previousUrl = env.ALERT_WEBHOOK_URL;
+      const previousChannels = env.CHANNELS_ENABLED;
+      env.ALERT_WEBHOOK_URL = 'https://hooks.example.test/alert';
+      env.CHANNELS_ENABLED = 'whatsapp';
+      const fetchMock = vi.fn().mockResolvedValue({ ok: true, status: 200 });
+      vi.stubGlobal('fetch', fetchMock);
+
+      await outboxRepository.enqueueMessage({
+        conversationId,
+        phoneNumberId: 'telegram',
+        recipientPhone: 'tg-resolve',
+        content: 'tg resuelto',
+        channel: 'telegram',
+      });
+      outboxDispatcher.pauseChannel('telegram', 60_000);
+
+      try {
+        await outboxDispatcher.checkChannelBacklog();
+        expect(fetchMock).toHaveBeenCalledTimes(1);
+
+        await db.query(`UPDATE public.outbox_messages SET status = 'SENT' WHERE channel = 'telegram';`);
+        await outboxDispatcher.checkChannelBacklog();
+
+        expect(fetchMock).toHaveBeenCalledTimes(2);
+        const resolved = JSON.parse(fetchMock.mock.calls[1][1].body as string);
+        expect(resolved).toMatchObject({ alert: 'CHANNEL_BACKLOG_RESOLVED', channel: 'telegram', pending: 0 });
+      } finally {
+        outboxDispatcher.resume();
+        env.ALERT_WEBHOOK_URL = previousUrl;
+        env.CHANNELS_ENABLED = previousChannels;
+        vi.unstubAllGlobals();
+      }
+    });
+    it('entrega la alerta al webhook de on-call en la transición', async () => {
+      const previousUrl = env.ALERT_WEBHOOK_URL;
+      const previousChannels = env.CHANNELS_ENABLED;
+      env.ALERT_WEBHOOK_URL = 'https://hooks.example.test/alert';
+      env.CHANNELS_ENABLED = 'whatsapp';
+      const fetchMock = vi.fn().mockResolvedValue({ ok: true, status: 200 });
+      vi.stubGlobal('fetch', fetchMock);
+
+      await outboxRepository.enqueueMessage({
+        conversationId,
+        phoneNumberId: 'telegram',
+        recipientPhone: 'tg-oncall',
+        content: 'tg on-call',
+        channel: 'telegram',
+      });
+      outboxDispatcher.pauseChannel('telegram', 60_000);
+
+      try {
+        await outboxDispatcher.checkChannelBacklog();
+        expect(fetchMock).toHaveBeenCalledTimes(1);
+        const body = JSON.parse(fetchMock.mock.calls[0][1].body as string);
+        expect(body).toMatchObject({ alert: 'CHANNEL_BACKLOG', channel: 'telegram', pending: 1 });
+      } finally {
+        outboxDispatcher.resume();
+        env.ALERT_WEBHOOK_URL = previousUrl;
+        env.CHANNELS_ENABLED = previousChannels;
+        vi.unstubAllGlobals();
+      }
+    });
     it('alerta una sola vez por transición cuando un canal pausado tiene backlog', async () => {
+      const previousUrl = env.ALERT_WEBHOOK_URL;
+      env.ALERT_WEBHOOK_URL = 'https://hooks.example.test/alert';
+      const fetchMock = vi.fn().mockResolvedValue({ ok: true, status: 200 });
+      vi.stubGlobal('fetch', fetchMock);
       await outboxRepository.enqueueMessage({
         conversationId,
         phoneNumberId: 'telegram',
@@ -256,9 +359,12 @@ describe('Fase 4: Transactional Outbox Pattern & Dispatcher', { timeout: 30000 }
 
         await outboxDispatcher.checkChannelBacklog();
         expect(warn.mock.calls.length).toBe(firstCalls);
+        expect(fetchMock).toHaveBeenCalledTimes(1);
       } finally {
         warn.mockRestore();
         outboxDispatcher.resume();
+        env.ALERT_WEBHOOK_URL = previousUrl;
+        vi.unstubAllGlobals();
       }
     });
 

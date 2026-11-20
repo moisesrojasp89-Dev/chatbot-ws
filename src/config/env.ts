@@ -47,6 +47,15 @@ const envSchema = z.object({
     (value) => (typeof value === 'string' && value.trim() === '' ? undefined : value),
     z.coerce.number().int().positive().default(100)
   ),
+  // Webhook opcional de on-call compatible con Slack/genérico. Solo HTTPS.
+  ALERT_WEBHOOK_URL: z.preprocess(
+    (value) => (typeof value === 'string' && value.trim() === '' ? undefined : value),
+    z
+      .string()
+      .url()
+      .refine((value) => value.startsWith('https://'), 'ALERT_WEBHOOK_URL debe usar https')
+      .optional()
+  ),
 });
 
 const parsedEnv = envSchema.safeParse(process.env);
