@@ -132,6 +132,7 @@ export class MetaChannelSender implements ChannelAdapter {
             externalMessageId: message.id,
             externalAccountId: accountId,
             senderId: message.from,
+            recipientId: message.from,
             senderName,
             occurredAt: isoFromUnixSeconds(message.timestamp),
             type: message.type ?? 'text',

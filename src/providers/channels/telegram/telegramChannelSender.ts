@@ -25,9 +25,15 @@ const telegramUpdateSchema = z
         message_id: z.number().optional(),
         date: z.number().optional(),
         text: z.string().optional(),
-        chat: z.object({ id: z.union([z.number(), z.string()]) }).optional(),
+        chat: z
+          .object({
+            id: z.union([z.number(), z.string()]),
+            type: z.enum(['private', 'group', 'supergroup', 'channel']).optional(),
+          })
+          .optional(),
         from: z
           .object({
+            id: z.union([z.number(), z.string()]).optional(),
             first_name: z.string().optional(),
             last_name: z.string().optional(),
             username: z.string().optional(),
@@ -100,6 +106,9 @@ export class TelegramChannelSender implements ChannelAdapter {
       return { messages: [], statuses: [] };
     }
 
+    const fromId = message?.from?.id;
+    const senderId = fromId !== undefined ? String(fromId) : String(chatId);
+
     const senderName =
       [message?.from?.first_name, message?.from?.last_name].filter(Boolean).join(' ').trim() ||
       message?.from?.username ||
@@ -117,7 +126,8 @@ export class TelegramChannelSender implements ChannelAdapter {
           channel: this.channel,
           externalMessageId: `tg:in:${update.update_id}`,
           externalAccountId: 'telegram',
-          senderId: String(chatId),
+          senderId,
+          recipientId: String(chatId),
           senderName,
           occurredAt: dateValid
             ? new Date(dateSeconds * 1000).toISOString()

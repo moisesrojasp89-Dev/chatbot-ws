@@ -50,7 +50,7 @@ Copia `.env.example` a `.env` y completa:
 ```bash
 npm ci
 cp .env.example .env      # completar variables
-npm run migrate           # aplica 001 → 016
+npm run migrate           # aplica 001 → 017
 npm run build
 npm test
 npm run quality-gate
@@ -70,14 +70,15 @@ curl -s http://localhost:3000/ready
 
 ### Estado actual
 
-- Migraciones: **001 → 016**.
+- Migraciones: **001 → 017**.
 - La **015** cambia `UNIQUE(wamid)` por `UNIQUE(channel, wamid)` en `inbound_events`.
 - La **016** backfillea payloads inbound legados al sobre normalizado. Requiere la misma ventana que la 015: `stop → migrate → start`.
+- La **017** agrega `recipient_id` y lo backfillea con `sender_phone`. Permite responder al chat del grupo sin perder la identidad del remitente.
 
 ### Verificar en SQL
 
 ```sql
-SELECT count(*) FROM public.migrations_history;  -- debe dar 16
+SELECT count(*) FROM public.migrations_history;  -- debe dar 17
 SELECT conname FROM pg_constraint
 WHERE conrelid = 'public.inbound_events'::regclass
   AND contype = 'u';
@@ -88,7 +89,7 @@ WHERE conrelid = 'public.inbound_events'::regclass
 
 En una base descartable del proyecto de pruebas se validó:
 
-- `npm run migrate` aplicó **001 → 016** (16/16) en una base vacía.
+- `npm run migrate` aplicó **001 → 017** (17/17) en una base vacía.
 - Una fila legada con shape Meta se backfilleó correctamente: `text`, `type`, `senderName`, `occurredAt` en UTC y `raw` = mensaje original; segunda pasada idempotente (0 filas).
 - `assertSchemaReady`, `GET /health` y `GET /ready` respondieron OK contra esa base.
 - La base descartable se eliminó al finalizar.
@@ -136,8 +137,8 @@ El adaptador valida `X-Telegram-Bot-Api-Secret-Token` y responde `200` tras pers
 
 - [ ] `GET /health` → `200` con `database: connected`.
 - [ ] `GET /ready` → `200` con `status: ready`.
-- [ ] `SELECT count(*) FROM migrations_history` → `16`.
-- [ ] El arranque validó el esquema (migraciones 014-016, columna `channel` y unicidad por canal).
+- [ ] `SELECT count(*) FROM migrations_history` → `17`.
+- [ ] El arranque validó el esquema (migraciones 014-017, columnas `channel`/`recipient_id` y unicidad por canal).
 - [ ] Webhook de Meta verificado (`GET /webhook` challenge).
 - [ ] Webhook de Telegram registrado (`getWebhookInfo`).
 - [ ] Un mensaje de prueba entra, se persiste y responde por el mismo canal.
@@ -150,6 +151,15 @@ El adaptador valida `X-Telegram-Bot-Api-Secret-Token` y responde `200` tras pers
 - `GET /health` incluye `outbox: "ok" | "paused"` como dato informativo. **`/ready` no depende de la pausa del outbox**: sacar la instancia de rotación por un problema de egress provocaría un restart-loop que perdería webhooks que el inbound sí puede procesar.
 - La pausa global del outbox es una operación interna (no hay endpoint público); la pausa por canal (error sistémico) se refleja en `CHANNEL_BACKLOG`.
 - Si `ALERT_WEBHOOK_URL` está definido, cada transición (alerta o resolución) se POSTea; si el webhook falla, se reintenta en el siguiente ciclo (timeout 5s, sin backoff ni tope). Sin URL solo hay logs.
+
+---
+
+### 6.2 Grupos de Telegram
+
+- El remitente (`senderId` = `from.id`) identifica el contacto; el destinatario (`recipientId` = `chat.id`) es a donde se responde.
+- En privados ambos coinciden; en grupos el bot responde al grupo, no al usuario por separado.
+- La identidad del evento sigue siendo `tg:in:<update_id>` y la deduplicación no cambia.
+- Solo texto en esta fase; media queda pendiente.
 
 ---
 

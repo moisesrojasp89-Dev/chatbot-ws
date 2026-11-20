@@ -100,6 +100,7 @@ export async function ingestParsedInbound(
       wamid: message.externalMessageId,
       phoneNumberId: accountId,
       senderPhone: message.senderId,
+      recipientId: message.recipientId,
       payload: message,
       channel: message.channel,
     });

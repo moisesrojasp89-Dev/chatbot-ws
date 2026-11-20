@@ -805,4 +805,35 @@ describe('Fase 5B: Inbound Durable (I18) & Pipeline de Concurrencia', { timeout:
       expect(recentCheck.rows.length).toBe(1);
     });
   });
+  it('responde al chat del grupo usando recipient_id, no el remitente', async () => {
+    const event = await inboundRepository.persistInboundEvent({
+      wamid: 'tg:in:group-reply-1',
+      phoneNumberId: 'telegram',
+      senderPhone: '777',
+      recipientId: '-100123',
+      channel: 'telegram',
+      payload: { type: 'text', text: 'Hola grupo', senderName: 'Ana' },
+    });
+    expect(event).not.toBeNull();
+
+    const [batch] = await inboundRepository.claimNextBatchWithCoalescing(1);
+    expect(batch).toBeDefined();
+
+    vi.spyOn(agentEngine, 'processMessage').mockResolvedValueOnce({
+      replyText: 'Hola desde el bot',
+      catalogToolExecuted: false,
+      leadToolExecuted: false,
+      handoffToolExecuted: false,
+      promptTokens: 10,
+      completionTokens: 5,
+      totalLatencyMs: 10,
+    });
+
+    await inboundDispatcher.processCoalescedBatch(batch);
+
+    const outbox = await db.query(
+      `SELECT recipient_phone FROM public.outbox_messages WHERE channel = 'telegram' ORDER BY created_at DESC LIMIT 1;`
+    );
+    expect(outbox.rows[0]?.recipient_phone).toBe('-100123');
+  });
 });

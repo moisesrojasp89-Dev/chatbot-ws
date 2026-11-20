@@ -11,6 +11,8 @@ export interface InboundEventRecord {
   wamid: string;
   phone_number_id: string;
   sender_phone: string;
+  /** Destinatario de la respuesta (chat/grupo). Null en filas previas a 017. */
+  recipient_id?: string | null;
   payload: any;
   status: 'PENDING' | 'PROCESSING' | 'DONE' | 'FAILED';
   locked_at: Date | null;
@@ -38,6 +40,7 @@ export class InboundRepository {
       wamid: string;
       phoneNumberId: string;
       senderPhone: string;
+      recipientId?: string;
       payload: unknown;
       channel?: string;
     },
@@ -45,9 +48,9 @@ export class InboundRepository {
   ): Promise<InboundEventRecord | null> {
     const query = `
       INSERT INTO public.inbound_events (
-        wamid, phone_number_id, sender_phone, payload, channel
+        wamid, phone_number_id, sender_phone, payload, channel, recipient_id
       )
-      VALUES ($1, $2, $3, $4, $5)
+      VALUES ($1, $2, $3, $4, $5, $6)
       ON CONFLICT (channel, wamid) DO NOTHING
       RETURNING *;
     `;
@@ -59,6 +62,7 @@ export class InboundRepository {
       params.senderPhone,
       JSON.stringify(params.payload),
       normalizeChannelName(params.channel),
+      params.recipientId ?? params.senderPhone,
     ]);
 
     return (result.rows[0] as InboundEventRecord) || null;
@@ -84,6 +88,7 @@ export class InboundRepository {
             WHERE older.channel = i.channel
               AND older.phone_number_id = i.phone_number_id
               AND older.sender_phone = i.sender_phone
+              AND COALESCE(older.recipient_id, older.sender_phone) = COALESCE(i.recipient_id, i.sender_phone)
               AND older.id <> i.id
               AND (
                 older.status = 'PROCESSING'
@@ -140,6 +145,7 @@ export class InboundRepository {
             WHERE older.channel = i.channel
               AND older.phone_number_id = i.phone_number_id
               AND older.sender_phone = i.sender_phone
+              AND COALESCE(older.recipient_id, older.sender_phone) = COALESCE(i.recipient_id, i.sender_phone)
               AND older.id <> i.id
               AND (
                 older.status = 'PROCESSING'
@@ -185,6 +191,7 @@ export class InboundRepository {
         WHERE channel = $1
           AND sender_phone = $2
           AND phone_number_id = $3
+          AND COALESCE(recipient_id, sender_phone) = $6
           AND status = 'PENDING'
           AND next_retry_at <= clock_timestamp()
           AND (created_at > $4 OR (created_at = $4 AND id > $5))
@@ -197,6 +204,7 @@ export class InboundRepository {
         primary.phone_number_id,
         primary.created_at,
         primary.id,
+        primary.recipient_id ?? primary.sender_phone,
       ]);
 
       const primaryMsgType = (primary.payload as { type?: string } | null)?.type;

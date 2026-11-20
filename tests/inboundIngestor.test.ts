@@ -22,6 +22,7 @@ function parsedWith(overrides: Partial<ParsedInbound['messages'][number]> = {}):
         externalMessageId: 'tg:in:1',
         externalAccountId: 'telegram',
         senderId: '99',
+        recipientId: '99',
         senderName: 'Test',
         occurredAt: new Date().toISOString(),
         type: 'text',
@@ -60,5 +61,15 @@ describe('Ingestor genérico de inbound', () => {
     expect(persist).not.toHaveBeenCalled();
     expect(result.ignored).toBe(1);
     expect(audit).toHaveBeenCalledWith(null, 'MALFORMED_WEBHOOK_PAYLOAD', 'SYSTEM', expect.any(Object));
+  });
+  it('persiste el recipientId del sobre normalizado', async () => {
+    vi.spyOn(phoneRateLimiter, 'isRateLimited').mockReturnValue(false);
+    const persist = vi
+      .spyOn(inboundRepository, 'persistInboundEvent')
+      .mockResolvedValue({ id: 'ev-1' } as never);
+
+    await ingestParsedInbound(adapter, parsedWith({ recipientId: '-100999' }));
+
+    expect(persist).toHaveBeenCalledWith(expect.objectContaining({ recipientId: '-100999' }));
   });
 });

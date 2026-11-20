@@ -6,10 +6,12 @@ const MIGRATIONS = [
   '014_multichannel_channel_columns.sql',
   '015_inbound_channel_identity.sql',
   '016_backfill_normalized_inbound_payload.sql',
+  '017_inbound_recipient_id.sql',
 ];
 
 const COLUMNS = [
   { table_name: 'inbound_events', column_name: 'channel' },
+  { table_name: 'inbound_events', column_name: 'recipient_id' },
   { table_name: 'outbox_messages', column_name: 'channel' },
 ];
 
@@ -30,7 +32,7 @@ afterEach(() => {
 });
 
 describe('Guard de esquema al arranque', () => {
-  it('pasa contra la base de pruebas migrada (014-016)', async () => {
+  it('pasa contra la base de pruebas migrada (014-017)', async () => {
     await expect(assertSchemaReady()).resolves.toBeUndefined();
   });
 
@@ -41,12 +43,13 @@ describe('Guard de esquema al arranque', () => {
 
     expect(error).toBeInstanceOf(SchemaValidationError);
     const issues = (error as SchemaValidationError).issues;
-    expect(issues).toHaveLength(3);
+    expect(issues).toHaveLength(4);
     expect(issues).toEqual(
       expect.arrayContaining([
         expect.stringContaining('014_multichannel_channel_columns.sql'),
         expect.stringContaining('015_inbound_channel_identity.sql'),
         expect.stringContaining('016_backfill_normalized_inbound_payload.sql'),
+        expect.stringContaining('017_inbound_recipient_id.sql'),
       ])
     );
   });
@@ -54,7 +57,10 @@ describe('Guard de esquema al arranque', () => {
   it('falla si falta la columna channel en outbox_messages', async () => {
     mockQueries(
       MIGRATIONS.map((filename) => ({ filename })),
-      [{ table_name: 'inbound_events', column_name: 'channel' }],
+      [
+        { table_name: 'inbound_events', column_name: 'channel' },
+        { table_name: 'inbound_events', column_name: 'recipient_id' },
+      ],
       VALID_CONSTRAINT
     );
 

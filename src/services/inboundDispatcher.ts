@@ -289,7 +289,7 @@ export class InboundDispatcher {
         conversationId: conversation.id,
         channel: normalizeChannelName(event.channel),
         phoneNumberId: event.phone_number_id,
-        recipientPhone: event.sender_phone,
+        recipientPhone: event.recipient_id ?? event.sender_phone,
         messageType: 'text',
         content:
           'Disculpa, tuvimos una dificultad técnica para procesar tu último mensaje. Un asesor humano te atenderá a la brevedad.',
@@ -595,7 +595,7 @@ export class InboundDispatcher {
               conversationId: conversation.id,
               channel: normalizeChannelName(primaryEvent.channel),
               phoneNumberId: primaryEvent.phone_number_id,
-              recipientPhone: from,
+              recipientPhone: primaryEvent.recipient_id ?? from,
               messageType: 'text',
               content: decision.replyText,
               promptTokens: decision.promptTokens,
@@ -708,7 +708,7 @@ export class InboundDispatcher {
           conversationId: conversation.id,
           channel: normalizeChannelName(primaryEvent.channel),
           phoneNumberId: primaryEvent.phone_number_id,
-          recipientPhone: primaryEvent.sender_phone,
+          recipientPhone: primaryEvent.recipient_id ?? primaryEvent.sender_phone,
           messageType: 'text',
           content:
             'Hola, recibimos tu mensaje con retraso debido a una pausa técnica temporal. Un asesor de nuestro equipo te atenderá de forma prioritaria en breve.',
@@ -788,7 +788,7 @@ export class InboundDispatcher {
             conversationId: activeConversation.id,
             channel: normalizeChannelName(primaryEvent.channel),
             phoneNumberId: primaryEvent.phone_number_id,
-            recipientPhone: primaryEvent.sender_phone,
+            recipientPhone: primaryEvent.recipient_id ?? primaryEvent.sender_phone,
             messageType: 'text',
             content:
               'Disculpa, en este momento experimentamos dificultades técnicas temporales. Hemos notificado a nuestro equipo y un asesor te atenderá a la brevedad.',

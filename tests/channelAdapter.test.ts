@@ -50,6 +50,7 @@ describe('Conformidad de adaptadores inbound', () => {
       externalMessageId: 'wamid.in.1',
       externalAccountId: 'pn-1',
       senderId: '573001112233',
+      recipientId: '573001112233',
       senderName: 'Ana',
       type: 'text',
       text: 'Hola desde Meta',
@@ -91,6 +92,7 @@ describe('Conformidad de adaptadores inbound', () => {
       externalMessageId: 'tg:in:77',
       externalAccountId: 'telegram',
       senderId: '99',
+      recipientId: '99',
       senderName: 'Ana Perez',
       type: 'text',
       text: 'Hola desde Telegram',
@@ -153,6 +155,27 @@ describe('Conformidad de adaptadores inbound', () => {
       externalMessageId: 'wamid.out.failed',
       status: 'failed',
       errors: [{ code: 131026, title: 'Undeliverable' }],
+    });
+  });
+  it('separa remitente y destinatario en un grupo de Telegram', () => {
+    const parsed = telegramChannelSender.parseInbound({
+      update_id: 88,
+      message: {
+        message_id: 9,
+        date: 1700000000,
+        text: 'Hola grupo',
+        chat: { id: -100123, type: 'group' },
+        from: { id: 777, first_name: 'Ana' },
+      },
+    });
+
+    expect(parsed.messages[0]).toMatchObject({
+      channel: 'telegram',
+      externalMessageId: 'tg:in:88',
+      senderId: '777',
+      recipientId: '-100123',
+      senderName: 'Ana',
+      text: 'Hola grupo',
     });
   });
 });

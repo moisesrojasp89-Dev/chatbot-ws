@@ -15,6 +15,7 @@ const REQUIRED_MIGRATIONS = [
   '014_multichannel_channel_columns.sql',
   '015_inbound_channel_identity.sql',
   '016_backfill_normalized_inbound_payload.sql',
+  '017_inbound_recipient_id.sql',
 ];
 
 /**
@@ -60,14 +61,21 @@ export async function assertSchemaReady(): Promise<void> {
        FROM information_schema.columns
        WHERE table_schema = 'public'
          AND table_name IN ('inbound_events', 'outbox_messages')
-         AND column_name = 'channel';`
+         AND column_name IN ('channel', 'recipient_id');`
     );
-    const found = new Set((columns.rows as Array<{ table_name: string }>).map((row) => row.table_name));
+    const found = new Set(
+      (columns.rows as Array<{ table_name: string; column_name: string }>).map(
+        (row) => `${row.table_name}.${row.column_name}`
+      )
+    );
 
     for (const table of ['inbound_events', 'outbox_messages']) {
-      if (!found.has(table)) {
+      if (!found.has(`${table}.channel`)) {
         issues.push(`Falta la tabla o columna channel en public.${table} (migración 014).`);
       }
+    }
+    if (!found.has('inbound_events.recipient_id')) {
+      issues.push('Falta la columna recipient_id en public.inbound_events (migración 017).');
     }
   } catch (error) {
     issues.push(`No se pudieron inspeccionar las columnas de canal: ${(error as Error).message}`);
@@ -104,5 +112,5 @@ export async function assertSchemaReady(): Promise<void> {
     throw new SchemaValidationError(issues);
   }
 
-  logger.info('🧱 Esquema validado: migraciones 014-016, columnas channel y unicidad por canal');
+  logger.info('🧱 Esquema validado: migraciones 014-017, columnas channel/recipient y unicidad por canal');
 }

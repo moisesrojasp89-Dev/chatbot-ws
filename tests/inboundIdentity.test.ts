@@ -68,4 +68,47 @@ describe('Identidad inbound multicanal', () => {
     expect(whatsappBatch?.secondaryEvents.map((event) => event.wamid)).not.toContain('tg-coalesce-1');
     expect(telegramBatch?.secondaryEvents.map((event) => event.wamid)).not.toContain('wa-coalesce-1');
   });
+  it('persiste el destinatario del grupo separado del remitente', async () => {
+    const event = await inboundRepository.persistInboundEvent({
+      wamid: 'tg:in:group-1',
+      phoneNumberId: 'telegram',
+      senderPhone: '777',
+      recipientId: '-100123',
+      channel: 'telegram',
+      payload: { type: 'text', text: 'hola grupo', senderName: 'Ana' },
+    });
+
+    expect(event?.recipient_id).toBe('-100123');
+    expect(event?.sender_phone).toBe('777');
+
+    const claimed = await inboundRepository.claimPendingBatch(10);
+    expect(claimed.find((row) => row.wamid === 'tg:in:group-1')?.recipient_id).toBe('-100123');
+  });
+  it('no coalesce el mismo remitente en dos grupos distintos', async () => {
+    await inboundRepository.persistInboundEvent({
+      wamid: 'tg:in:group-a',
+      phoneNumberId: 'telegram',
+      senderPhone: '777',
+      recipientId: '-100A',
+      channel: 'telegram',
+      payload: { type: 'text', text: 'grupo A', senderName: 'Ana' },
+    });
+    await inboundRepository.persistInboundEvent({
+      wamid: 'tg:in:group-b',
+      phoneNumberId: 'telegram',
+      senderPhone: '777',
+      recipientId: '-100B',
+      channel: 'telegram',
+      payload: { type: 'text', text: 'grupo B', senderName: 'Ana' },
+    });
+
+    const batches = await inboundRepository.claimNextBatchWithCoalescing(10);
+    const groupA = batches.find((batch) => batch.primaryEvent.wamid === 'tg:in:group-a');
+    const groupB = batches.find((batch) => batch.primaryEvent.wamid === 'tg:in:group-b');
+
+    expect(groupA?.primaryEvent.recipient_id).toBe('-100A');
+    expect(groupB?.primaryEvent.recipient_id).toBe('-100B');
+    expect(groupA?.secondaryEvents).toHaveLength(0);
+    expect(groupB?.secondaryEvents).toHaveLength(0);
+  });
 });

@@ -75,6 +75,8 @@ export interface NormalizedInboundMessage {
   externalMessageId: string;
   externalAccountId: string;
   senderId: string;
+  /** Destinatario de la respuesta (chat/grupo); por defecto senderId. */
+  recipientId: string;
   senderName: string;
   occurredAt: string;
   type: string;
