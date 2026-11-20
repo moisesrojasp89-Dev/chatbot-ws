@@ -284,7 +284,7 @@ export class InboundDispatcher {
   private async handleReaperPoisonPillFallback(event: InboundEventRecord): Promise<void> {
     try {
       const contact = await contactRepository.findOrCreate(event.sender_phone);
-      const conversation = await conversationRepository.getOrCreateActiveSession(contact.id);
+      const conversation = await conversationRepository.getOrCreateActiveSession(contact.id, event.recipient_id ?? event.sender_phone);
       await outboxRepository.enqueueMessage({
         conversationId: conversation.id,
         channel: normalizeChannelName(event.channel),
@@ -359,10 +359,10 @@ export class InboundDispatcher {
     try {
       // 1. Obtener o crear contacto y sesión conversacional activa
       contact = await contactRepository.findOrCreate(from, senderName);
-      conversation = await conversationRepository.getOrCreateActiveSession(contact.id);
+      conversation = await conversationRepository.getOrCreateActiveSession(contact.id, primaryEvent.recipient_id ?? primaryEvent.sender_phone);
 
       // 2. B5: Comprobar escalamiento a humano existente ANTES de evaluar frescura
-      if (contact.status === 'HUMAN_HANDOFF') {
+      if (conversation.current_state === 'HUMAN_ESCALATION') {
         logger.info(
           { from, eventId: primaryEvent.id },
           'Mensajes recibidos durante HUMAN_HANDOFF: archivando sin respuesta bot'
@@ -561,7 +561,7 @@ export class InboundDispatcher {
 
         // C. Transición de estado conversacional
         let targetState = conversation.current_state;
-        if (conversation.current_state === 'IDLE') {
+        if (conversation.current_state === 'IDLE' && !decision.pendingHandoff) {
           targetState = 'QUALIFYING';
         }
         if (targetState !== conversation.current_state) {
@@ -761,7 +761,7 @@ export class InboundDispatcher {
     if (!activeConversation?.id && primaryEvent.sender_phone) {
       try {
         const c = await contactRepository.findOrCreate(primaryEvent.sender_phone);
-        activeConversation = await conversationRepository.getOrCreateActiveSession(c.id);
+        activeConversation = await conversationRepository.getOrCreateActiveSession(c.id, primaryEvent.recipient_id ?? primaryEvent.sender_phone);
       } catch (e) {
         logger.error(
           { e, eventId: primaryEvent.id },

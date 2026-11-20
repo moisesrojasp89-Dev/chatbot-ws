@@ -19,6 +19,7 @@
 | `9337c5a` | **Ola 2.1:** contrato completo — registry de adapters, ingestor genérico, router/challenge declarados por el adaptador y tests solo-Telegram/no-leak/ingestor. | 179 tests | PASS con reservas; residuales documentales corregidos |
 | `3b063f8` | **Ola 3A:** alertas `CHANNEL_BACKLOG` con dedupe, snapshot por canal y `/health` informativo; sin `/ready` para outbox. | 184 tests | PASS con reservas; residuales corregidos |
 | `59d3708` | **Ola 3A.1:** entrega de transiciones `CHANNEL_BACKLOG` a webhook de on-call HTTPS, opcional, con reintento por ciclo. | 191 tests | PASS con reservas; residuales corregidos |`n| `07bab68` | **Ola 3B:** grupos de Telegram con remitente `from.id` y destinatario `chat.id`; migración 017 `recipient_id` y coalescencia por chat. | 196 tests | PASS |
+| pendiente | **Ola 3C:** conversaciones/FSM/handoff aislados por chat_id; migración 018. | 198 tests | PASS con reservas; residuales corregidos |
 
 ### Decisiones registradas
 

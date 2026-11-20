@@ -36,6 +36,7 @@ export interface ContactRecord {
 export interface ConversationRecord {
   id: string;
   contact_id: string;
+  chat_id?: string | null;
   current_state: FSMState;
   context_summary: string;
   total_messages_count: number;

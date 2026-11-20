@@ -686,6 +686,17 @@ describe('Fase 5B: Inbound Durable (I18) & Pipeline de Concurrencia', { timeout:
       const outbox = await db.query(`SELECT * FROM public.outbox_messages WHERE recipient_phone = $1;`, [senderPhone]);
       expect(outbox.rows.length).toBe(1);
       expect(outbox.rows[0].content).toContain('Te estamos transfiriendo con un asesor humano');
+
+      // H1: el estado HUMAN_ESCALATION no debe ser sobrescrito por QUALIFYING
+      const conv = await db.query(
+        `SELECT c.current_state
+         FROM public.conversations c
+         JOIN public.contacts ct ON ct.id = c.contact_id
+         WHERE ct.phone_number = $1
+         ORDER BY c.last_interaction_at DESC LIMIT 1;`,
+        [senderPhone]
+      );
+      expect(conv.rows[0]?.current_state).toBe('HUMAN_ESCALATION');
     });
 
     it('B5: Dos eventos viejos del mismo remitente generan exactamente 1 handoff y 1 mensaje en outbox', async () => {

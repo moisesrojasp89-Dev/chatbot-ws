@@ -16,6 +16,7 @@ const REQUIRED_MIGRATIONS = [
   '015_inbound_channel_identity.sql',
   '016_backfill_normalized_inbound_payload.sql',
   '017_inbound_recipient_id.sql',
+  '018_conversations_chat_scope.sql',
 ];
 
 /**
@@ -60,8 +61,8 @@ export async function assertSchemaReady(): Promise<void> {
       `SELECT table_name, column_name
        FROM information_schema.columns
        WHERE table_schema = 'public'
-         AND table_name IN ('inbound_events', 'outbox_messages')
-         AND column_name IN ('channel', 'recipient_id');`
+         AND table_name IN ('inbound_events', 'outbox_messages', 'conversations')
+         AND column_name IN ('channel', 'recipient_id', 'chat_id');`
     );
     const found = new Set(
       (columns.rows as Array<{ table_name: string; column_name: string }>).map(
@@ -76,6 +77,9 @@ export async function assertSchemaReady(): Promise<void> {
     }
     if (!found.has('inbound_events.recipient_id')) {
       issues.push('Falta la columna recipient_id en public.inbound_events (migración 017).');
+    }
+    if (!found.has('conversations.chat_id')) {
+      issues.push('Falta la columna chat_id en public.conversations (migración 018).');
     }
   } catch (error) {
     issues.push(`No se pudieron inspeccionar las columnas de canal: ${(error as Error).message}`);

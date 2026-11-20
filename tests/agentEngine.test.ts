@@ -93,12 +93,15 @@ describe('Fase 3 — Motor Agéntico (ReAct Loop & Tools)', () => {
   });
 
   describe('Herramienta Atómica: requestHumanHandoff (F3-C5)', () => {
-    it('debe prevenir doble handoff si el contacto ya estaba en HUMAN_HANDOFF', async () => {
+    it('debe prevenir doble handoff si la conversación ya tiene uno activo', async () => {
       vi.spyOn(db, 'withTransaction').mockImplementationOnce(async (cb: any) => {
         const mockClient = {
-          query: vi.fn().mockResolvedValueOnce({
-            rows: [{ id: mockContact.id, status: 'HUMAN_HANDOFF' }],
-          }),
+          query: vi
+            .fn()
+            .mockResolvedValueOnce({
+              rows: [{ id: mockContact.id, status: 'BOT_ACTIVE' }],
+            })
+            .mockResolvedValueOnce({ rows: [{ id: 'existing-handoff' }] }),
         };
         return cb(mockClient);
       });
@@ -119,11 +122,12 @@ describe('Fase 3 — Motor Agéntico (ReAct Loop & Tools)', () => {
         const mockClient = {
           query: vi
             .fn()
-            .mockResolvedValueOnce({ rows: [{ id: mockContact.id, status: 'BOT_ACTIVE' }] }) // 1. Check contact
-            .mockResolvedValueOnce({ rows: [] }) // 2. Update contact status
-            .mockResolvedValueOnce({ rows: [{ id: 'handoff-456' }] }) // 3. Insert handoff session
-            .mockResolvedValueOnce({ rows: [] }) // 4. Update conversation state
-            .mockResolvedValueOnce({ rows: [] }), // 5. Audit log
+            .mockResolvedValueOnce({ rows: [{ id: mockContact.id, status: 'BOT_ACTIVE' }] }) // 1. Lock contact
+            .mockResolvedValueOnce({ rows: [] }) // 2. Existing handoff check
+            .mockResolvedValueOnce({ rows: [] }) // 3. Update contact status
+            .mockResolvedValueOnce({ rows: [{ id: 'handoff-456' }] }) // 4. Insert handoff session
+            .mockResolvedValueOnce({ rows: [] }) // 5. Update conversation state
+            .mockResolvedValueOnce({ rows: [] }), // 6. Audit log
         };
         return cb(mockClient);
       });
@@ -138,6 +142,32 @@ describe('Fase 3 — Motor Agéntico (ReAct Loop & Tools)', () => {
       expect(result.success).toBe(true);
       expect(result.handoffId).toBe('handoff-456');
       expect(result.message).toContain('transferido tu caso a un asesor humano');
+    });
+
+    it('permite handoff en otra conversación aunque el contacto esté en HUMAN_HANDOFF', async () => {
+      vi.spyOn(db, 'withTransaction').mockImplementationOnce(async (cb: any) => {
+        const mockClient = {
+          query: vi
+            .fn()
+            .mockResolvedValueOnce({ rows: [{ id: mockContact.id, status: 'HUMAN_HANDOFF' }] })
+            .mockResolvedValueOnce({ rows: [] }) // No hay handoff en ESTA conversación
+            .mockResolvedValueOnce({ rows: [] })
+            .mockResolvedValueOnce({ rows: [{ id: 'handoff-other-chat' }] })
+            .mockResolvedValueOnce({ rows: [] })
+            .mockResolvedValueOnce({ rows: [] }),
+        };
+        return cb(mockClient);
+      });
+
+      const result = await requestHumanHandoff({
+        contactId: mockContact.id,
+        conversationId: mockConversation.id,
+        briefing: 'Handoff en otro chat del mismo contacto.',
+        reason: 'USER_REQUEST',
+      });
+
+      expect(result.success).toBe(true);
+      expect(result.handoffId).toBe('handoff-other-chat');
     });
   });
 

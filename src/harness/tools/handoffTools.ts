@@ -78,9 +78,20 @@ export async function executeHandoffInTransaction(
     throw new Error(`Contacto ${args.contactId} no encontrado`);
   }
 
-  const currentStatus = contactRes.rows[0].status;
-  if (currentStatus === 'HUMAN_HANDOFF') {
-    logger.info({ contactId: args.contactId }, 'Contacto ya se encontraba en HUMAN_HANDOFF. Omitiendo duplicación.');
+  // La deduplicación es por conversación/chat, no por contacto global: el mismo
+  // usuario puede tener handoff en un grupo y seguir con bot en otro.
+  const existingHandoff = await client.query(
+    `SELECT id FROM public.handoff_sessions
+     WHERE conversation_id = $1
+       AND status IN ('PENDING', 'ASSIGNED')
+     LIMIT 1;`,
+    [args.conversationId]
+  );
+  if (existingHandoff.rows.length > 0) {
+    logger.info(
+      { contactId: args.contactId, conversationId: args.conversationId },
+      'La conversación ya tiene un handoff activo. Omitiendo duplicación.'
+    );
     return {
       success: false,
       alreadyInHandoff: true,

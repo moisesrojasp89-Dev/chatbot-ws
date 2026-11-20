@@ -8,37 +8,38 @@ export class ConversationRepository {
    * F2-C2: Obtiene la sesión activa o crea una nueva.
    * Cierra explícitamente cualquier sesión previa inactiva (> 30 min) antes de proceder.
    */
-  public async getOrCreateActiveSession(contactId: string): Promise<ConversationRecord> {
+  public async getOrCreateActiveSession(contactId: string, chatId?: string): Promise<ConversationRecord> {
     // 1. Cerrar explícitamente sesiones expiradas por inactividad (> 30 minutos)
     const closeExpiredQuery = `
       UPDATE public.conversations
       SET current_state = 'CLOSED', closed_at = NOW()
       WHERE contact_id = $1
+        AND chat_id = $2
         AND current_state != 'CLOSED'
         AND last_interaction_at < NOW() - INTERVAL '30 minutes';
     `;
-    await db.query(closeExpiredQuery, [contactId]);
+    await db.query(closeExpiredQuery, [contactId, chatId ?? contactId]);
 
     // 2. Buscar si existe una sesión activa no expirada
     const findActiveQuery = `
       SELECT * FROM public.conversations
-      WHERE contact_id = $1 AND current_state != 'CLOSED'
+      WHERE contact_id = $1 AND chat_id = $2 AND current_state != 'CLOSED'
       ORDER BY last_interaction_at DESC
       LIMIT 1;
     `;
-    const activeRes = await db.query(findActiveQuery, [contactId]);
+    const activeRes = await db.query(findActiveQuery, [contactId, chatId ?? contactId]);
     if (activeRes.rows.length > 0) {
       return activeRes.rows[0] as ConversationRecord;
     }
 
     // 3. Si no existe sesión activa, crear una nueva en estado IDLE
     const createQuery = `
-      INSERT INTO public.conversations (contact_id, current_state, last_interaction_at)
-      VALUES ($1, 'IDLE', NOW())
+      INSERT INTO public.conversations (contact_id, chat_id, current_state, last_interaction_at)
+      VALUES ($1, $2, 'IDLE', NOW())
       RETURNING *;
     `;
-    const createRes = await db.query(createQuery, [contactId]);
-    logger.info({ contactId, conversationId: createRes.rows[0].id }, 'Nueva sesión conversacional iniciada');
+    const createRes = await db.query(createQuery, [contactId, chatId ?? contactId]);
+    logger.info({ contactId, chatId: chatId ?? contactId, conversationId: createRes.rows[0].id }, 'Nueva sesión conversacional iniciada');
     return createRes.rows[0] as ConversationRecord;
   }
 
