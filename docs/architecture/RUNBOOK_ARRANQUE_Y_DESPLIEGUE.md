@@ -31,6 +31,7 @@ Copia `.env.example` a `.env` y completa:
 | `LLM_BASE_URL` | `https://api.openai.com/v1` | Endpoint compatible con Chat Completions |
 | `LLM_MODEL` | `gpt-4o-mini` | Modelo con soporte de function calling |
 | `CHANNELS_ENABLED` | `whatsapp` o `whatsapp,telegram` | Canales activos; cada uno exige su configuración |
+| `BACKLOG_ALERT_THRESHOLD` | `100` | Desde este umbral el log `CHANNEL_BACKLOG` pasa de `warn` a `error` |
 
 ### Por canal
 
@@ -141,6 +142,13 @@ El adaptador valida `X-Telegram-Bot-Api-Secret-Token` y responde `200` tras pers
 - [ ] Un mensaje de prueba entra, se persiste y responde por el mismo canal.
 - [ ] Logs sin tokens ni PII.
 
+### 6.1 Observabilidad de backlog
+
+- `CHANNEL_BACKLOG` (warn/error) aparece cuando un canal deshabilitado, pausado o con breaker distinto de `CLOSED` tiene filas `PENDING`.
+- El log incluye `channel`, `pending`, `threshold`, `enabled`, `paused` y `breakerState`; se deduplica por transición y emite `CHANNEL_BACKLOG_RESOLVED` al normalizarse.
+- `GET /health` incluye `outbox: "ok" | "paused"` como dato informativo. **`/ready` no depende de la pausa del outbox**: sacar la instancia de rotación por un problema de egress provocaría un restart-loop que perdería webhooks que el inbound sí puede procesar.
+- La pausa global del outbox es una operación interna (no hay endpoint público); la pausa por canal (error sistémico) se refleja en `CHANNEL_BACKLOG`.
+
 ---
 
 ## 7. Troubleshooting
@@ -150,6 +158,7 @@ El adaptador valida `X-Telegram-Bot-Api-Secret-Token` y responde `200` tras pers
 | `42P10` en inbound | Migración 015 no aplicada o código viejo tras migrar | `stop → npm run migrate → start` |
 | Arranque aborta con "Esquema incompatible" | Faltan migraciones 014/015, columnas `channel` o unicidad por canal | `stop → npm run migrate → start`; no rolling deploy |
 | `Canal habilitado sin adaptador` al arrancar | `CHANNELS_ENABLED` incluye un canal no implementado | Corregir la lista o implementar el adaptador |
+| `CHANNEL_BACKLOG` en logs | Canal deshabilitado, pausado o breaker no `CLOSED` con filas `PENDING` | Revisar `CHANNELS_ENABLED`, logs de pausa y estado del breaker; el inbound puede seguir sano |
 | `Configuración de Meta/Telegram incompleta` | Faltan credenciales del canal habilitado | Completar `.env` |
 | Webhook Telegram `401` | Secret token distinto al registrado | Repetir `setWebhook` con el secret correcto |
 | `401` del LLM | Clave/base URL/modelo incorrectos | Validar `LLM_*` |

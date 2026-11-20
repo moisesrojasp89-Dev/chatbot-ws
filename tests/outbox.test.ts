@@ -6,6 +6,9 @@ import { messageRepository } from '../src/repositories/messageRepository.js';
 import { whatsappClient } from '../src/providers/channels/meta/whatsappClient.js';
 import { contactRepository } from '../src/repositories/contactRepository.js';
 import { conversationRepository } from '../src/repositories/conversationRepository.js';
+import { logger } from '../src/utils/logger.js';
+import { getChannelCircuitBreaker } from '../src/utils/circuitBreaker.js';
+import { env } from '../src/config/env.js';
 
 describe('Fase 4: Transactional Outbox Pattern & Dispatcher', { timeout: 30000 }, () => {
   const testPhone = '5511999990001';
@@ -185,7 +188,114 @@ describe('Fase 4: Transactional Outbox Pattern & Dispatcher', { timeout: 30000 }
       const none = await outboxRepository.claimPendingBatch(10, undefined, []);
       expect(none).toEqual([]);
     });
+
+    it('cuenta el backlog PENDING agrupado por canal', async () => {
+      await outboxRepository.enqueueMessage({
+        conversationId,
+        phoneNumberId: 'phone_test_123',
+        recipientPhone: testPhone,
+        content: 'wa pendiente',
+        channel: 'whatsapp',
+      });
+      await outboxRepository.enqueueMessage({
+        conversationId,
+        phoneNumberId: 'telegram',
+        recipientPhone: 'tg-chat',
+        content: 'tg pendiente',
+        channel: 'telegram',
+      });
+
+      const counts = await outboxRepository.countPendingByChannel();
+      const byChannel = new Map(counts.map((row) => [row.channel, row.pending]));
+
+      expect(byChannel.get('whatsapp')).toBe(1);
+      expect(byChannel.get('telegram')).toBe(1);
+    });
+    it('el snapshot de backlog refleja canales pausados', async () => {
+      const previousChannels = env.CHANNELS_ENABLED;
+      env.CHANNELS_ENABLED = 'whatsapp';
+      await outboxRepository.enqueueMessage({
+        conversationId,
+        phoneNumberId: 'telegram',
+        recipientPhone: 'tg-paused',
+        content: 'tg retenido',
+        channel: 'telegram',
+      });
+
+      outboxDispatcher.pauseChannel('telegram', 60_000);
+      try {
+        const snapshot = await outboxDispatcher.getBacklogSnapshot();
+        const telegram = snapshot.find((item) => item.channel === 'telegram');
+
+        expect(telegram).toMatchObject({ pending: 1, paused: true, enabled: false });
+      } finally {
+        outboxDispatcher.resume();
+        env.CHANNELS_ENABLED = previousChannels;
+      }
+    });
+
   describe('OutboxDispatcher Service', () => {
+    it('alerta una sola vez por transición cuando un canal pausado tiene backlog', async () => {
+      await outboxRepository.enqueueMessage({
+        conversationId,
+        phoneNumberId: 'telegram',
+        recipientPhone: 'tg-alert',
+        content: 'tg retenido',
+        channel: 'telegram',
+      });
+      outboxDispatcher.pauseChannel('telegram', 60_000);
+      const warn = vi.spyOn(logger, 'warn');
+
+      try {
+        await outboxDispatcher.checkChannelBacklog();
+        const firstCalls = warn.mock.calls.length;
+        expect(warn).toHaveBeenCalledWith(
+          expect.objectContaining({ alert: 'CHANNEL_BACKLOG', channel: 'telegram', pending: 1 }),
+          expect.any(String)
+        );
+
+        await outboxDispatcher.checkChannelBacklog();
+        expect(warn.mock.calls.length).toBe(firstCalls);
+      } finally {
+        warn.mockRestore();
+        outboxDispatcher.resume();
+      }
+    });
+
+    it('escala a error cuando el breaker OPEN supera el umbral', async () => {
+      const previousThreshold = env.BACKLOG_ALERT_THRESHOLD;
+      env.BACKLOG_ALERT_THRESHOLD = 1;
+      await outboxRepository.enqueueMessage({
+        conversationId,
+        phoneNumberId: 'phone_test_123',
+        recipientPhone: testPhone,
+        content: 'wa retenido',
+        channel: 'whatsapp',
+      });
+
+      const breaker = getChannelCircuitBreaker('whatsapp');
+      for (let i = 0; i < 5; i++) {
+        await breaker
+          .execute(async () => {
+            throw new Error('503 Service Unavailable');
+          })
+          .catch(() => {});
+      }
+      const error = vi.spyOn(logger, 'error');
+
+      try {
+        await outboxDispatcher.checkChannelBacklog();
+        expect(error).toHaveBeenCalledWith(
+          expect.objectContaining({ alert: 'CHANNEL_BACKLOG', channel: 'whatsapp', breakerState: 'OPEN' }),
+          expect.any(String)
+        );
+      } finally {
+        breaker.reset();
+        outboxDispatcher.resume();
+        env.BACKLOG_ALERT_THRESHOLD = previousThreshold;
+        error.mockRestore();
+      }
+    });
     it('debe procesar un mensaje pendiente, despacharlo a Meta y guardar en messages (F4-C2)', async () => {
       // Encolar mensaje en outbox
       const outboxMsg = await outboxRepository.enqueueMessage({

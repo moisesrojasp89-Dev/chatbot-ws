@@ -31,6 +31,7 @@ export const CONSTANTS = {
     BACKOFF_BASE_SECONDS: 1,     // Base de backoff exponencial: 1s, 2s, 4s
     REAPER_INTERVAL_MS: 30000,   // Frecuencia de escaneo de filas huérfanas (30s)
     REAPER_TIMEOUT_MINUTES: 2,   // Tiempo de expiración de lease para considerar fila huérfana (2 min)
+    BACKLOG_CHECK_INTERVAL_MS: 30000, // Frecuencia de evaluación de backlog por canal (30s)
   },
 
   // Auditor 5B (I18): Configuración del Inbound Worker Daemon

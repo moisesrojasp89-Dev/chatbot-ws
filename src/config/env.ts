@@ -42,6 +42,11 @@ const envSchema = z.object({
   // Ref del proyecto Supabase dedicado a pruebas (ver src/utils/databaseGuard.ts).
   // Opcional: si no se define, el guard usa DEFAULT_TEST_PROJECT_REF.
   TEST_PROJECT_REF: z.string().optional(),
+  // Umbral de backlog por canal pausado/OPEN para alertas operativas.
+  BACKLOG_ALERT_THRESHOLD: z.preprocess(
+    (value) => (typeof value === 'string' && value.trim() === '' ? undefined : value),
+    z.coerce.number().int().positive().default(100)
+  ),
 });
 
 const parsedEnv = envSchema.safeParse(process.env);

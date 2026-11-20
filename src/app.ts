@@ -5,6 +5,7 @@ import { handleChannelWebhook } from './controllers/channelWebhookController.js'
 import { logger } from './utils/logger.js';
 import { db } from './providers/database/dbClient.js';
 import { inboundDispatcher } from './services/inboundDispatcher.js';
+import { outboxDispatcher } from './services/outboxDispatcher.js';
 import { channelRegistry } from './providers/channels/channelRegistry.js';
 
 let isShuttingDown = false;
@@ -44,6 +45,7 @@ export async function buildApp(): Promise<FastifyInstance> {
     return {
       status: 'ok',
       database: isDbHealthy ? 'connected' : 'fallback_memory',
+      outbox: outboxDispatcher.isPaused() ? 'paused' : 'ok',
       uptimeSeconds: Math.floor(process.uptime()),
       timestamp: new Date().toISOString(),
     };
@@ -59,6 +61,7 @@ export async function buildApp(): Promise<FastifyInstance> {
       reply.status(503).send({ status: 'paused', reason: 'INBOUND_WORKER_PAUSED' });
       return;
     }
+
     const isDbHealthy = await db.isHealthy();
     if (!isDbHealthy) {
       reply.status(503).send({ status: 'unready', database: 'disconnected' });

@@ -122,6 +122,22 @@ export class OutboxRepository {
     return result.rows as OutboxRecord[];
   }
 
+  /** Backlog PENDING agrupado por canal (para alertas operativas). */
+  public async countPendingByChannel(): Promise<Array<{ channel: string; pending: number }>> {
+    const result = await db.query(
+      `SELECT channel, count(*)::int AS pending
+       FROM public.outbox_messages
+       WHERE status = 'PENDING'
+       GROUP BY channel
+       ORDER BY channel ASC;`
+    );
+
+    return (result.rows as Array<{ channel: string; pending: number }>).map((row) => ({
+      channel: row.channel,
+      pending: row.pending,
+    }));
+  }
+
   /**
    * Auditor Checkpoint 1 & 2: Valida si el lease de procesamiento sigue activo
    * y pertenece a este worker antes de ejecutar el efecto irreversible (llamada a Meta).

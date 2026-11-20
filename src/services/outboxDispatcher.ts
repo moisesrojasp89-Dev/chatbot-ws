@@ -9,14 +9,27 @@ import {
 import { getChannelCircuitBreaker, CircuitOpenError } from '../utils/circuitBreaker.js';
 import { typingCadence } from '../harness/typingCadence.js';
 import { CONSTANTS } from '../config/constants.js';
+import { env } from '../config/env.js';
 import { logger } from '../utils/logger.js';
 import { OutboxRecord } from '../types/states.js';
 
 export type DispatchResult = 'SENT' | 'RETRY' | 'DEFERRED' | 'LEASE_LOST' | 'FAILED';
 
+export interface ChannelBacklogSnapshot {
+  channel: string;
+  pending: number;
+  paused: boolean;
+  enabled: boolean;
+  breakerState: string;
+  threshold: number;
+}
+
 export class OutboxDispatcher {
   private pollTimer: NodeJS.Timeout | null = null;
   private reaperTimer: NodeJS.Timeout | null = null;
+  private backlogTimer: NodeJS.Timeout | null = null;
+  private isCheckingBacklog: boolean = false;
+  private readonly lastBacklogAlerts = new Map<string, string>();
   private isPolling: boolean = false; // F4-C3: Anti-overlapping guard
   private isRunning: boolean = false;
   private isStopping: boolean = false; // Auditor 5A: Bandera de apagado en curso
@@ -64,9 +77,92 @@ export class OutboxDispatcher {
     return Math.max(0, Math.ceil((until - Date.now()) / 1000));
   }
 
+  /** Snapshot del backlog PENDING por canal, con pausa y breaker. */
+  public async getBacklogSnapshot(): Promise<ChannelBacklogSnapshot[]> {
+    const rows = await outboxRepository.countPendingByChannel();
+    const counts = new Map<string, number>();
+    for (const row of rows) {
+      const key = normalizeChannelName(row.channel);
+      counts.set(key, (counts.get(key) ?? 0) + row.pending);
+    }
+
+    const channels = new Set<string>([...channelRegistry.enabledChannels(), ...counts.keys()]);
+
+    return Array.from(channels).map((channel) => ({
+      channel,
+      pending: counts.get(channel) ?? 0,
+      paused: this.isChannelPaused(channel),
+      enabled: channelRegistry.isEnabled(channel),
+      breakerState: getChannelCircuitBreaker(channel).getState(),
+      threshold: env.BACKLOG_ALERT_THRESHOLD,
+    }));
+  }
+
+  /**
+   * Emite alertas estructuradas para canales con backlog que no están sanos
+   * (deshabilitados, pausados o breaker no CLOSED). Deduplica por transición y
+   * emite un log de resolución al normalizarse.
+   */
+  public async checkChannelBacklog(): Promise<ChannelBacklogSnapshot[]> {
+    if (this.isCheckingBacklog) return [];
+    this.isCheckingBacklog = true;
+
+    try {
+      const snapshot = await this.getBacklogSnapshot();
+
+      for (const item of snapshot) {
+        const needsAlert = !item.enabled || item.paused || item.breakerState !== 'CLOSED';
+
+        if (!needsAlert || item.pending === 0) {
+          if (this.lastBacklogAlerts.has(item.channel)) {
+            this.lastBacklogAlerts.delete(item.channel);
+            logger.info(
+              { alert: 'CHANNEL_BACKLOG_RESOLVED', channel: item.channel, pending: item.pending },
+              `✅ Backlog normalizado en canal ${item.channel}`
+            );
+          }
+          continue;
+        }
+
+        const level = item.pending >= item.threshold ? 'error' : 'warn';
+        const signature = `${level}:${item.enabled}:${item.paused}:${item.breakerState}`;
+        if (this.lastBacklogAlerts.get(item.channel) === signature) continue;
+        this.lastBacklogAlerts.set(item.channel, signature);
+
+        const alert = {
+          alert: 'CHANNEL_BACKLOG' as const,
+          channel: item.channel,
+          pending: item.pending,
+          threshold: item.threshold,
+          paused: item.paused,
+          enabled: item.enabled,
+          breakerState: item.breakerState,
+        };
+        const message = `⚠️ Backlog retenido en canal ${item.channel}: ${item.pending} PENDING (habilitado=${item.enabled}, pausado=${item.paused}, breaker=${item.breakerState})`;
+
+        if (level === 'error') {
+          logger.error(alert, message);
+        } else {
+          logger.warn(alert, message);
+        }
+      }
+
+      // Poda de canales que ya no aparecen en el snapshot.
+      const activeChannels = new Set(snapshot.map((item) => item.channel));
+      for (const channel of this.lastBacklogAlerts.keys()) {
+        if (!activeChannels.has(channel)) this.lastBacklogAlerts.delete(channel);
+      }
+
+      return snapshot;
+    } finally {
+      this.isCheckingBacklog = false;
+    }
+  }
+
   public resume(): void {
     this.pausedUntil = 0;
     this.pausedUntilByChannel.clear();
+    this.lastBacklogAlerts.clear();
     this.isStopping = false;
     this.isPolling = false;
     this.inFlight = null;
@@ -85,6 +181,7 @@ export class OutboxDispatcher {
 
     this.isRunning = true;
     this.isStopping = false;
+    this.lastBacklogAlerts.clear();
     logger.info(
       { intervalMs: CONSTANTS.OUTBOX.POLL_INTERVAL_MS, batchSize: CONSTANTS.OUTBOX.BATCH_SIZE },
       '🚀 Outbox Dispatcher Daemon iniciado'
@@ -112,6 +209,13 @@ export class OutboxDispatcher {
         logger.error({ err }, 'Error en ciclo de reaper de OutboxDispatcher');
       }
     }, CONSTANTS.OUTBOX.REAPER_INTERVAL_MS);
+
+    this.backlogTimer = setInterval(() => {
+      this.checkChannelBacklog().catch((err) => {
+        logger.error({ err }, 'Error en ciclo de alertas de backlog del OutboxDispatcher');
+      });
+    }, CONSTANTS.OUTBOX.BACKLOG_CHECK_INTERVAL_MS);
+    this.backlogTimer.unref?.();
   }
 
   /**
@@ -128,6 +232,10 @@ export class OutboxDispatcher {
     if (this.reaperTimer) {
       clearInterval(this.reaperTimer);
       this.reaperTimer = null;
+    }
+    if (this.backlogTimer) {
+      clearInterval(this.backlogTimer);
+      this.backlogTimer = null;
     }
 
     if (this.inFlight || this.backgroundTasks.size > 0) {

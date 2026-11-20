@@ -2,6 +2,7 @@ import { afterEach, describe, expect, it, vi } from 'vitest';
 import { buildApp } from '../src/app.js';
 import { env } from '../src/config/env.js';
 import { channelRegistry } from '../src/providers/channels/channelRegistry.js';
+import { outboxDispatcher } from '../src/services/outboxDispatcher.js';
 import { telegramChannelSender } from '../src/providers/channels/telegram/telegramChannelSender.js';
 
 afterEach(() => {
@@ -130,6 +131,36 @@ describe('Contrato de canales en buildApp', () => {
       env.CHANNELS_ENABLED = previousChannels;
       env.TELEGRAM_BOT_TOKEN = previousToken;
       env.TELEGRAM_WEBHOOK_SECRET = previousSecret;
+    }
+  });
+
+  it('/health informa la pausa del outbox sin tumbar /ready', async () => {
+    const previousChannels = env.CHANNELS_ENABLED;
+    const previousAccessToken = env.META_ACCESS_TOKEN;
+    const previousAppSecret = env.META_APP_SECRET;
+    const previousVerifyToken = env.WEBHOOK_VERIFY_TOKEN;
+
+    env.CHANNELS_ENABLED = 'whatsapp';
+    env.META_ACCESS_TOKEN = 'test_meta_access_token';
+    env.META_APP_SECRET = 'test_meta_app_secret';
+    env.WEBHOOK_VERIFY_TOKEN = 'test_verify_token';
+
+    const app = await buildApp();
+    outboxDispatcher.pauseGlobal(60_000);
+    try {
+      const health = await app.inject({ method: 'GET', url: '/health' });
+      expect(health.statusCode).toBe(200);
+      expect(JSON.parse(health.body)).toMatchObject({ status: 'ok', outbox: 'paused' });
+
+      const ready = await app.inject({ method: 'GET', url: '/ready' });
+      expect(ready.statusCode).toBe(200);
+    } finally {
+      outboxDispatcher.resume();
+      await app.close();
+      env.CHANNELS_ENABLED = previousChannels;
+      env.META_ACCESS_TOKEN = previousAccessToken;
+      env.META_APP_SECRET = previousAppSecret;
+      env.WEBHOOK_VERIFY_TOKEN = previousVerifyToken;
     }
   });
 });
