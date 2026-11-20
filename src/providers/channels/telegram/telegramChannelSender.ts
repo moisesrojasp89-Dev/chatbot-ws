@@ -9,10 +9,11 @@ import {
   ParsedInbound,
 } from '../channelTypes.js';
 import { getTelegramConfig, TelegramConfigError } from './telegramConfig.js';
+import { env } from '../../../config/env.js';
 
 interface TelegramApiResponse {
   ok: boolean;
-  result?: { message_id?: number };
+  result?: { message_id?: number; file_path?: string };
   description?: string;
   error_code?: number;
   parameters?: { retry_after?: number };
@@ -245,6 +246,51 @@ export class TelegramChannelSender implements ChannelAdapter {
     };
   }
 
+  public async downloadMedia(media: NormalizedMedia): Promise<{
+    buffer: Buffer;
+    mimeType: string;
+    fileName?: string;
+  }> {
+    try {
+      const { botToken } = getTelegramConfig();
+      const metaResponse = await fetch(
+        `https://api.telegram.org/bot${botToken}/getFile?file_id=${encodeURIComponent(media.fileId)}`,
+        { signal: AbortSignal.timeout(10000) }
+      );
+      const meta = (await metaResponse.json().catch(() => null)) as TelegramApiResponse | null;
+      const filePath = meta?.result && 'file_path' in meta.result ? meta.result.file_path : undefined;
+
+      if (!metaResponse.ok || !meta?.ok || typeof filePath !== 'string' || filePath.length === 0) {
+        throw new ChannelSendError('TRANSIENT', 'Telegram getFile no devolvió un file_path utilizable');
+      }
+      if (filePath.includes('..')) {
+        throw new ChannelSendError('FATAL', 'Telegram devolvió un file_path inválido');
+      }
+
+      const fileResponse = await fetch(`https://api.telegram.org/file/bot${botToken}/${filePath}`, {
+        signal: AbortSignal.timeout(20000),
+      });
+      if (!fileResponse.ok) {
+        throw new ChannelSendError('TRANSIENT', `Telegram file download HTTP ${fileResponse.status}`);
+      }
+
+      const contentLength = Number(fileResponse.headers.get('content-length'));
+      if (Number.isFinite(contentLength) && contentLength > env.MEDIA_MAX_BYTES) {
+        throw new ChannelSendError('FATAL', 'Telegram media excede MEDIA_MAX_BYTES');
+      }
+
+      const buffer = Buffer.from(await fileResponse.arrayBuffer());
+      const mimeType =
+        media.mimeType || fileResponse.headers.get('content-type') || 'application/octet-stream';
+      const fileName = media.fileName || filePath.split('/').pop();
+
+      return { buffer, mimeType, fileName };
+    } catch (error) {
+      if (error instanceof ChannelSendError) throw error;
+      // No propagar URLs que contienen el bot token.
+      throw new ChannelSendError('NETWORK', 'Telegram media download failed');
+    }
+  }
   public async sendText(request: ChannelSendRequest): Promise<ChannelSendResult> {
     try {
       const { botToken } = getTelegramConfig();

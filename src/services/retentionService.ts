@@ -1,6 +1,8 @@
 import { db } from '../providers/database/dbClient.js';
 import { CONSTANTS } from '../config/constants.js';
 import { logger } from '../utils/logger.js';
+import { env } from '../config/env.js';
+import { purgeMediaFiles } from './mediaStorage.js';
 
 export interface RetentionStats {
   inboundDone: number;
@@ -8,6 +10,7 @@ export interface RetentionStats {
   outboxSent: number;
   outboxFailed: number;
   statusEvents: number;
+  mediaFiles: number;
 }
 
 /**
@@ -62,6 +65,7 @@ export class RetentionService {
       outboxSent: 0,
       outboxFailed: 0,
       statusEvents: 0,
+      mediaFiles: 0,
     };
 
     const hasTimeRemaining = () => Date.now() - startTime < this.maxExecutionTimeMs;
@@ -165,12 +169,19 @@ export class RetentionService {
       await this.sleep(this.interBatchPauseMs);
     }
 
+    try {
+      stats.mediaFiles = await purgeMediaFiles(env.MEDIA_RETENTION_DAYS);
+    } catch (error) {
+      logger.warn({ error }, 'No se pudieron purgar binarios de media');
+    }
+
     const totalPurged =
       stats.inboundDone +
       stats.inboundFailed +
       stats.outboxSent +
       stats.outboxFailed +
-      stats.statusEvents;
+      stats.statusEvents +
+      stats.mediaFiles;
 
     if (totalPurged > 0) {
       logger.info(

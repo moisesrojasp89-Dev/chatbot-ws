@@ -47,6 +47,11 @@ const envSchema = z.object({
     (value) => (typeof value === 'string' && value.trim() === '' ? undefined : value),
     z.coerce.number().int().positive().default(100)
   ),
+  // Pipeline de media: descarga y almacenamiento local seguro (no binario en DB).
+  MEDIA_STORAGE_ENABLED: z.enum(['true', 'false']).default('true'),
+  MEDIA_STORAGE_DIR: z.string().default('./media'),
+  MEDIA_MAX_BYTES: z.coerce.number().int().positive().default(10 * 1024 * 1024),
+  MEDIA_RETENTION_DAYS: z.coerce.number().int().positive().default(7),
   // Webhook opcional de on-call compatible con Slack/genérico. Solo HTTPS.
   ALERT_WEBHOOK_URL: z.preprocess(
     (value) => (typeof value === 'string' && value.trim() === '' ? undefined : value),

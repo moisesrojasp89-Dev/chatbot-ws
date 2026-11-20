@@ -32,6 +32,10 @@ Copia `.env.example` a `.env` y completa:
 | `LLM_MODEL` | `gpt-4o-mini` | Modelo con soporte de function calling |
 | `CHANNELS_ENABLED` | `whatsapp` o `whatsapp,telegram` | Canales activos; cada uno exige su configuración |
 | `BACKLOG_ALERT_THRESHOLD` | `100` | Desde este umbral el log `CHANNEL_BACKLOG` pasa de `warn` a `error` |
+| `MEDIA_STORAGE_ENABLED` | `true` | Descarga/almacena media en el dispatcher |
+| `MEDIA_STORAGE_DIR` | `./media` | Directorio local; debe estar fuera de git |
+| `MEDIA_MAX_BYTES` | `10485760` | Límite duro por archivo |
+| `MEDIA_RETENTION_DAYS` | `7` | Purga de binarios por antigüedad |
 | `ALERT_WEBHOOK_URL` | `https://hooks.slack.com/...` | Opcional: recibe transiciones `CHANNEL_BACKLOG` por POST HTTPS; sin redirects, timeout 5s |
 
 ### Por canal
@@ -160,7 +164,7 @@ El adaptador valida `X-Telegram-Bot-Api-Secret-Token` y responde `200` tras pers
 - El remitente (`senderId` = `from.id`) identifica el contacto; el destinatario (`recipientId` = `chat.id`) es a donde se responde.
 - En privados ambos coinciden; en grupos el bot responde al grupo, no al usuario por separado. La conversación/FSM/handoff se aísla por `chat_id` (migración 018).
 - La identidad del evento sigue siendo `tg:in:<update_id>` y la deduplicación no cambia.
-- Media: se persiste metadata (`type`, `media.fileId`, caption) y se responde con texto. **No se descarga ni se envía al LLM el contenido binario**; para visión/transcripción falta un pipeline de descarga y un proveedor multimodal.
+- Media: el webhook solo persiste metadata (`type`, `media.fileId`, caption); el **dispatcher** descarga con `getFile`, valida tamaño y guarda el binario bajo `MEDIA_STORAGE_DIR/<canal>/<sha256>`. La ruta queda en `payload.media.storagePath`. El LLM recibe caption/nota, **no el binario**: falta visión/transcripción multimodal. Los binarios se purgan a los `MEDIA_RETENTION_DAYS` días por `RetentionService`.
 
 ---
 

@@ -19,7 +19,9 @@ import {
 import { CircuitBreaker, CircuitOpenError } from '../utils/circuitBreaker.js';
 import { CONSTANTS } from '../config/constants.js';
 import { logger } from '../utils/logger.js';
-import { normalizeChannelName } from '../providers/channels/channelTypes.js';
+import { NormalizedMedia, normalizeChannelName } from '../providers/channels/channelTypes.js';
+import { channelRegistry } from '../providers/channels/channelRegistry.js';
+import { storeMedia } from './mediaStorage.js';
 import { ContactRecord, ConversationRecord } from '../types/states.js';
 
 export class InboundDispatcher {
@@ -317,6 +319,38 @@ export class InboundDispatcher {
    * - Persiste CADA mensaje de forma individual e inmutable en public.messages.
    * - Compromete en una sola transacción atómica con Fencing Token.
    */
+  /**
+   * Descarga/almacena el media del evento primario y devuelve una nota para el
+   * LLM. Un fallo de almacenamiento no tumba el turno: se degrada a texto.
+   */
+  private async prepareMediaNote(event: InboundEventRecord): Promise<string> {
+    const payload = event.payload as { media?: NormalizedMedia } | null;
+    const media = payload?.media;
+    if (!media) return '';
+
+    try {
+      const adapter = channelRegistry.getAdapter(normalizeChannelName(event.channel ?? 'whatsapp'));
+      const stored = await storeMedia(event.channel ?? 'whatsapp', media, adapter);
+      if (!stored) return '';
+
+      try {
+        await inboundRepository.attachMediaPath(event.id, stored.relativePath);
+      } catch (error) {
+        logger.warn({ eventId: event.id, error }, 'No se pudo persistir la ruta del media');
+      }
+
+      return `[Archivo adjunto ${media.kind}: ${stored.mimeType}, ${Math.max(
+        1,
+        Math.round(stored.size / 1024)
+      )} KB]`;
+    } catch (error) {
+      logger.warn(
+        { eventId: event.id, channel: event.channel, kind: media.kind, error },
+        'No se pudo descargar/almacenar el media; se continúa sin binario'
+      );
+      return `[Archivo adjunto ${media.kind} no disponible]`;
+    }
+  }
   public async processCoalescedBatch(batch: CoalescedEventBatch): Promise<void> {
     const { primaryEvent, secondaryEvents, lockToken } = batch;
     const allEvents = [primaryEvent, ...secondaryEvents];
@@ -430,12 +464,14 @@ export class InboundDispatcher {
       }
 
       // 5. Inferencia LLM con presupuesto de turno determinista (24s) y AbortSignal de apagado (B6)
+      const mediaNote = await this.prepareMediaNote(primaryEvent);
+      const agentPrompt = mediaNote ? `${promptText}\n\n${mediaNote}` : promptText;
       const turnDeadlineMs = Date.now() + 24000;
       let decision;
       try {
         decision = await this.llmBreaker.execute(
           () =>
-            agentEngine.processMessage(contact!, conversation!, promptText, {
+            agentEngine.processMessage(contact!, conversation!, agentPrompt, {
               deferSideEffects: true,
               deadlineMs: turnDeadlineMs,
               abortSignal: this.shutdownAbortController.signal,

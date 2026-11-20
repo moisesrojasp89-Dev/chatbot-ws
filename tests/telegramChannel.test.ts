@@ -151,4 +151,39 @@ describe('Canal Telegram: ingress', () => {
     expect(reply.status).toHaveBeenCalledWith(200);
     expect(persist).not.toHaveBeenCalled();
   });
+  it('descarga el binario de un media vía getFile sin exponer el token', async () => {
+    vi.spyOn(globalThis, 'fetch')
+      .mockResolvedValueOnce(
+        new Response(JSON.stringify({ ok: true, result: { file_path: 'photos/a.jpg' } }), {
+          status: 200,
+          headers: { 'Content-Type': 'application/json' },
+        })
+      )
+      .mockResolvedValueOnce(
+        new Response(Buffer.from('img-bytes'), {
+          status: 200,
+          headers: { 'Content-Type': 'image/jpeg' },
+        })
+      );
+
+    const media = await telegramChannelSender.downloadMedia({ kind: 'image', fileId: 'f1' });
+
+    expect(media.mimeType).toBe('image/jpeg');
+    expect(media.buffer.toString()).toBe('img-bytes');
+    expect(media.fileName).toBe('a.jpg');
+  });
+  it('no filtra el token si falla la descarga de media', async () => {
+    const token = 'test_bot_token';
+    vi.spyOn(globalThis, 'fetch').mockRejectedValue(
+      new Error(`fallo https://api.telegram.org/bot${token}/getFile`)
+    );
+
+    const error = await telegramChannelSender
+      .downloadMedia({ kind: 'image', fileId: 'f1' })
+      .catch((err: unknown) => err);
+
+    expect(error).toBeInstanceOf(Error);
+    expect((error as Error).message).toContain('Telegram media download failed');
+    expect((error as Error).message).not.toContain(token);
+  });
 });

@@ -122,4 +122,10 @@ export interface ChannelAdapter extends ChannelSender {
   rawBody?: boolean;
   /** Verificación GET de challenge (webhooks tipo Meta). */
   verifyWebhookChallenge?(query: Record<string, unknown>): { ok: boolean; challenge?: string };
+  /** Descarga el binario de un media (sin exponer URLs/tokens al núcleo). */
+  downloadMedia?(media: NormalizedMedia): Promise<{
+    buffer: Buffer;
+    mimeType: string;
+    fileName?: string;
+  }>;
 }

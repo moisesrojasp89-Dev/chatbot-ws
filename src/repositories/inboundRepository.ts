@@ -68,6 +68,16 @@ export class InboundRepository {
     return (result.rows[0] as InboundEventRecord) || null;
   }
 
+  /** Adjunta la ruta de almacenamiento al media del payload (post-ACK). */
+  public async attachMediaPath(eventId: string, relativePath: string): Promise<void> {
+    await db.query(
+      `UPDATE public.inbound_events
+       SET payload = jsonb_set(payload, '{media,storagePath}', to_jsonb($2::text), true)
+       WHERE id = $1
+         AND payload ? 'media';`,
+      [eventId, relativePath]
+    );
+  }
   /**
    * Auditor 5B: Reclamo atómico con exclusión mutua mediante FOR UPDATE OF i SKIP LOCKED
    * y política de cabeza por remitente (Head-of-Line por usuario).
