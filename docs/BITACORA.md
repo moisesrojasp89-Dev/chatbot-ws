@@ -21,7 +21,7 @@
 | `59d3708` | **Ola 3A.1:** entrega de transiciones `CHANNEL_BACKLOG` a webhook de on-call HTTPS, opcional, con reintento por ciclo. | 191 tests | PASS con reservas; residuales corregidos |
 | `07bab68` | **Ola 3B:** grupos de Telegram con remitente `from.id` y destinatario `chat.id`; migración 017 `recipient_id` y coalescencia por chat. | 196 tests | PASS |
 | c38dd4e | **Ola 3C:** conversaciones/FSM/handoff aislados por chat_id; migración 018. | 198 tests | PASS con reservas; residuales corregidos |
-| pendiente | **Ola 3D:** media de Telegram normalizada (foto/documento/audio/video) con caption; sin descarga ni visión. | 201 tests | PASS con reservas; residuales corregidos |
+| c2f8763 | **Ola 3D:** media de Telegram normalizada (foto/documento/audio/video) con caption; sin descarga ni visión. | 201 tests | PASS con reservas; residuales corregidos |
 
 ### Decisiones registradas
 
