@@ -5,6 +5,7 @@ import {
   ChannelSendError,
   ChannelSendRequest,
   ChannelSendResult,
+  NormalizedMedia,
   ParsedInbound,
 } from '../channelTypes.js';
 import { getTelegramConfig, TelegramConfigError } from './telegramConfig.js';
@@ -25,6 +26,53 @@ const telegramUpdateSchema = z
         message_id: z.number().optional(),
         date: z.number().optional(),
         text: z.string().optional(),
+        caption: z.string().optional(),
+        photo: z
+          .array(
+            z.object({
+              file_id: z.string(),
+              width: z.number(),
+              height: z.number(),
+              file_size: z.number().optional(),
+            })
+          )
+          .optional(),
+        document: z
+          .object({
+            file_id: z.string(),
+            mime_type: z.string().optional(),
+            file_name: z.string().optional(),
+          })
+          .optional(),
+        audio: z
+          .object({
+            file_id: z.string(),
+            mime_type: z.string().optional(),
+            file_name: z.string().optional(),
+          })
+          .optional(),
+        voice: z
+          .object({
+            file_id: z.string(),
+            mime_type: z.string().optional(),
+          })
+          .optional(),
+        video: z
+          .object({
+            file_id: z.string(),
+            mime_type: z.string().optional(),
+            file_name: z.string().optional(),
+          })
+          .optional(),
+        video_note: z.object({ file_id: z.string() }).optional(),
+        sticker: z.object({ file_id: z.string(), emoji: z.string().optional() }).optional(),
+        animation: z
+          .object({
+            file_id: z.string(),
+            mime_type: z.string().optional(),
+          })
+          .optional(),
+
         chat: z
           .object({
             id: z.union([z.number(), z.string()]),
@@ -100,9 +148,63 @@ export class TelegramChannelSender implements ChannelAdapter {
     const update = parsed.data;
     const message = update.message;
     const chatId = message?.chat?.id;
-    const text = message?.text;
 
-    if (chatId === undefined || typeof text !== 'string') {
+    let media: NormalizedMedia | undefined;
+    const photo = message?.photo;
+    if (photo && photo.length > 0) {
+      const largest = photo.reduce((best, candidate) =>
+        candidate.width * candidate.height > best.width * best.height ? candidate : best
+      );
+      media = {
+        kind: 'image',
+        fileId: largest.file_id,
+        width: largest.width,
+        height: largest.height,
+      };
+    } else if (message?.document && !message?.animation) {
+      media = {
+        kind: 'document',
+        fileId: message.document.file_id,
+        mimeType: message.document.mime_type,
+        fileName: message.document.file_name,
+      };
+    } else if (message?.audio) {
+      media = {
+        kind: 'audio',
+        fileId: message.audio.file_id,
+        mimeType: message.audio.mime_type,
+        fileName: message.audio.file_name,
+      };
+    } else if (message?.voice) {
+      media = {
+        kind: 'voice',
+        fileId: message.voice.file_id,
+        mimeType: message.voice.mime_type,
+      };
+    } else if (message?.video) {
+      media = {
+        kind: 'video',
+        fileId: message.video.file_id,
+        mimeType: message.video.mime_type,
+        fileName: message.video.file_name,
+      };
+    } else if (message?.video_note) {
+      media = { kind: 'video_note', fileId: message.video_note.file_id };
+    } else if (message?.sticker) {
+      media = { kind: 'sticker', fileId: message.sticker.file_id };
+    } else if (message?.animation) {
+      media = {
+        kind: 'animation',
+        fileId: message.animation.file_id,
+        mimeType: message.animation.mime_type,
+      };
+    }
+
+    const text = message?.text ?? message?.caption ?? '';
+    const hasContent =
+      typeof message?.text === 'string' || typeof message?.caption === 'string' || media !== undefined;
+
+    if (chatId === undefined || !hasContent) {
       return { messages: [], statuses: [] };
     }
 
@@ -132,8 +234,9 @@ export class TelegramChannelSender implements ChannelAdapter {
           occurredAt: dateValid
             ? new Date(dateSeconds * 1000).toISOString()
             : new Date().toISOString(),
-          type: 'text',
+          type: media?.kind ?? 'text',
           text,
+          media,
           // Solo el mensaje original: el update completo ya no se duplica en messages.raw_payload.
           raw: message,
         },

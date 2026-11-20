@@ -70,6 +70,15 @@ export interface ChannelSender {
   sendTyping?(accountId: string, recipientId: string): Promise<void>;
 }
 
+export interface NormalizedMedia {
+  kind: string;
+  fileId: string;
+  mimeType?: string;
+  fileName?: string;
+  width?: number;
+  height?: number;
+}
+
 export interface NormalizedInboundMessage {
   channel: string;
   externalMessageId: string;
@@ -81,6 +90,7 @@ export interface NormalizedInboundMessage {
   occurredAt: string;
   type: string;
   text?: string;
+  media?: NormalizedMedia;
   raw?: unknown;
 }
 

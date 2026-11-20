@@ -178,4 +178,80 @@ describe('Conformidad de adaptadores inbound', () => {
       text: 'Hola grupo',
     });
   });
+  it('normaliza una foto de Telegram con caption como imagen', () => {
+    const parsed = telegramChannelSender.parseInbound({
+      update_id: 91,
+      message: {
+        message_id: 11,
+        date: 1700000000,
+        caption: 'Mira esta foto',
+        chat: { id: 99, type: 'private' },
+        from: { id: 99, first_name: 'Ana' },
+        photo: [
+          { file_id: 'small', width: 90, height: 90 },
+          { file_id: 'large', width: 1280, height: 720 },
+        ],
+      },
+    });
+
+    expect(parsed.messages[0]).toMatchObject({
+      type: 'image',
+      text: 'Mira esta foto',
+      media: { kind: 'image', fileId: 'large', width: 1280, height: 720 },
+    });
+  });
+
+  it('normaliza un documento de Telegram sin caption', () => {
+    const parsed = telegramChannelSender.parseInbound({
+      update_id: 92,
+      message: {
+        date: 1700000000,
+        chat: { id: 99 },
+        from: { id: 99 },
+        document: { file_id: 'doc-1', mime_type: 'application/pdf', file_name: 'factura.pdf' },
+      },
+    });
+
+    expect(parsed.messages[0]).toMatchObject({
+      type: 'document',
+      text: '',
+      media: { kind: 'document', fileId: 'doc-1', fileName: 'factura.pdf' },
+    });
+  });
+  it('normaliza audio, sticker y animation', () => {
+    const audio = telegramChannelSender.parseInbound({
+      update_id: 93,
+      message: {
+        date: 1700000000,
+        chat: { id: 99 },
+        from: { id: 99 },
+        audio: { file_id: 'audio-1', mime_type: 'audio/ogg' },
+      },
+    });
+    expect(audio.messages[0]).toMatchObject({
+      type: 'audio',
+      media: { kind: 'audio', fileId: 'audio-1', mimeType: 'audio/ogg' },
+    });
+
+    const sticker = telegramChannelSender.parseInbound({
+      update_id: 94,
+      message: { date: 1700000000, chat: { id: 99 }, from: { id: 99 }, sticker: { file_id: 'sticker-1' } },
+    });
+    expect(sticker.messages[0]).toMatchObject({ type: 'sticker', media: { fileId: 'sticker-1' } });
+
+    const animation = telegramChannelSender.parseInbound({
+      update_id: 95,
+      message: {
+        date: 1700000000,
+        chat: { id: 99 },
+        from: { id: 99 },
+        animation: { file_id: 'anim-1', mime_type: 'video/mp4' },
+        document: { file_id: 'anim-doc', mime_type: 'video/mp4' },
+      },
+    });
+    expect(animation.messages[0]).toMatchObject({
+      type: 'animation',
+      media: { kind: 'animation', fileId: 'anim-1' },
+    });
+  });
 });

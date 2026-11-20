@@ -160,7 +160,7 @@ El adaptador valida `X-Telegram-Bot-Api-Secret-Token` y responde `200` tras pers
 - El remitente (`senderId` = `from.id`) identifica el contacto; el destinatario (`recipientId` = `chat.id`) es a donde se responde.
 - En privados ambos coinciden; en grupos el bot responde al grupo, no al usuario por separado. La conversación/FSM/handoff se aísla por `chat_id` (migración 018).
 - La identidad del evento sigue siendo `tg:in:<update_id>` y la deduplicación no cambia.
-- Solo texto en esta fase; media queda pendiente.
+- Media: se persiste metadata (`type`, `media.fileId`, caption) y se responde con texto. **No se descarga ni se envía al LLM el contenido binario**; para visión/transcripción falta un pipeline de descarga y un proveedor multimodal.
 
 ---
 
