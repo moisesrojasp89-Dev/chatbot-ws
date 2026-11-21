@@ -34,7 +34,7 @@
 | 77e9920 | **Ola 4A.4b:** subir techo a 100k y contar tokens del outbox pendiente con máximo, no solo historial. | 232 tests | PASS |
 | 05e35b7 | **Ola 4A.5:** reescritura acotada de guardrails y RAG léxico por pack (`search_knowledge`). | 236 tests | PASS con reservas; residuales corregidos |
 | b44bafc | **Ola 4A.5b:** cerrar fail-open, incluir respuesta bloqueada en rewrite y filtrar RAG bajo umbral. | 236 tests | PASS con reservas; residuales corregidos |
-| pendiente | **Ola 4A.6:** RAG vectorial opcional (embeddings OpenAI-compatible) con fallback léxico. | 238 tests | Pendiente de cierre |
+| 1d1eb34 | **Ola 4A.6:** RAG vectorial opcional (embeddings OpenAI-compatible) con fallback léxico. | 238 tests | PASS con reservas |
 
 ### Decisiones registradas
 
