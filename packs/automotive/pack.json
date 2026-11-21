@@ -33,7 +33,43 @@
       "familia": ["suv"]
     },
     "minScore": 0.35
-  },  "catalog": [
+  },  "knowledge": [
+    {
+      "id": "financing",
+      "title": "Financiamiento de vehículos",
+      "content": "El financiamiento está sujeto a aprobación de una entidad financiera y a la documentación del cliente. El bot puede explicar el proceso y pedir datos, pero no puede aprobar crédito ni garantizar tasas.",
+      "tags": ["financiamiento", "credito", "cuota", "banco"],
+      "source": "Política comercial"
+    },
+    {
+      "id": "trade-in",
+      "title": "Permuta de vehículo",
+      "content": "La permuta requiere inspección física y valoración de un asesor. El cliente puede enviar marca, modelo, año, kilometraje y fotos; la oferta final no se confirma por chat.",
+      "tags": ["permuta", "trade in", "parte de pago", "usado"],
+      "source": "Política comercial"
+    },
+    {
+      "id": "test-drive",
+      "title": "Requisitos de test drive",
+      "content": "El test drive requiere licencia de conducir vigente, disponibilidad del vehículo y confirmación de un asesor. La solicitud por chat no equivale a una cita confirmada.",
+      "tags": ["test drive", "prueba de manejo", "licencia", "cita"],
+      "source": "Política comercial"
+    },
+    {
+      "id": "warranty",
+      "title": "Garantía de vehículos",
+      "content": "Los vehículos nuevos tienen garantía de fábrica según el fabricante. Los usados se entregan con la garantía que se indique en la ficha y contrato; no se promete garantía adicional por chat.",
+      "tags": ["garantia", "nuevo", "usado", "fábrica"],
+      "source": "Política comercial"
+    },
+    {
+      "id": "delivery",
+      "title": "Tiempos de entrega",
+      "content": "La entrega depende de la disponibilidad y del proceso de documentación. El plazo estimado se confirma con un asesor después de la compra; no se prometen fechas exactas por chat.",
+      "tags": ["entrega", "plazo", "documentacion", "disponibilidad"],
+      "source": "Política comercial"
+    }
+  ],  "catalog": [
     {
       "id": "suv-001",
       "name": "Toyota RAV4 2023",

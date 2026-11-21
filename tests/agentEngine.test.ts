@@ -226,6 +226,78 @@ describe('Fase 3 — Motor Agéntico (ReAct Loop & Tools)', () => {
       expect(result.replyText).toContain('Chatbot WS');
       expect(result.promptTokens).toBe(0);
     });
+    it('reescribe una respuesta bloqueada con el motivo del guardrail', async () => {
+      vi.spyOn(messageRepository, 'getSlidingContextWindow').mockResolvedValueOnce([]);
+      const spyLlm = vi
+        .spyOn(llmClient, 'generateTurn')
+        .mockResolvedValueOnce({
+          text: '',
+          functionCalls: [{ name: 'searchProductCatalog', args: { query: 'Plan Starter' } }],
+          promptTokens: 100,
+          completionTokens: 20,
+          latencyMs: 100,
+        })
+        .mockResolvedValueOnce({
+          text: 'Te dejo el plan en $30,000 USD.',
+          functionCalls: undefined,
+          promptTokens: 100,
+          completionTokens: 20,
+          latencyMs: 100,
+        })
+        .mockResolvedValueOnce({
+          text: 'El Plan Starter cuesta $49 USD mensuales.',
+          functionCalls: undefined,
+          promptTokens: 80,
+          completionTokens: 15,
+          latencyMs: 100,
+        });
+
+      const result = await agentEngine.processMessage(
+        mockContact,
+        mockConversation,
+        '¿Cuánto cuesta el Plan Starter?'
+      );
+
+      expect(spyLlm).toHaveBeenCalledTimes(3);
+      expect(result.replyText).toContain('$49 USD');
+      expect(result.replyText).not.toContain('30,000');
+      expect(result.promptTokens).toBe(280);
+    });
+
+    it('usa la respuesta segura si la reescritura vuelve a violar la política', async () => {
+      vi.spyOn(messageRepository, 'getSlidingContextWindow').mockResolvedValueOnce([]);
+      vi.spyOn(llmClient, 'generateTurn')
+        .mockResolvedValueOnce({
+          text: '',
+          functionCalls: [{ name: 'searchProductCatalog', args: { query: 'Plan Starter' } }],
+          promptTokens: 100,
+          completionTokens: 20,
+          latencyMs: 100,
+        })
+        .mockResolvedValueOnce({
+          text: 'Te dejo el plan en $30,000 USD.',
+          functionCalls: undefined,
+          promptTokens: 100,
+          completionTokens: 20,
+          latencyMs: 100,
+        })
+        .mockResolvedValueOnce({
+          text: 'Te lo dejo en $30,000 USD, es mi última oferta.',
+          functionCalls: undefined,
+          promptTokens: 80,
+          completionTokens: 15,
+          latencyMs: 100,
+        });
+
+      const result = await agentEngine.processMessage(
+        mockContact,
+        mockConversation,
+        '¿Cuánto cuesta el Plan Starter?'
+      );
+
+      expect(result.replyText).toContain('Déjame verificar el precio');
+      expect(result.replyText).not.toContain('30,000');
+    });
   });
 
   describe('Simulador de Cadencia Humana (F3-C2)', () => {

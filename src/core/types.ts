@@ -26,6 +26,16 @@ export const businessProfileSchema = z.object({
   policies: z.record(z.unknown()).default({}),
 });
 
+export const knowledgeDocumentSchema = z
+  .object({
+    id: z.string().min(1),
+    title: z.string().min(1),
+    content: z.string().min(1),
+    tags: z.array(z.string()).default([]),
+    source: z.string().optional(),
+  })
+  .strict();
+
 export const packSearchSchema = z
   .object({
     synonyms: z.record(z.array(z.string())).default({}),
@@ -36,6 +46,7 @@ export const packSearchSchema = z
 export const businessPackSchema = z.object({
   profile: businessProfileSchema,
   catalog: z.array(catalogItemSchema).default([]),
+  knowledge: z.array(knowledgeDocumentSchema).default([]),
   search: packSearchSchema.optional(),
   prompt: z
     .object({

@@ -56,7 +56,11 @@ El test falla si un escenario deja de bloquear o si se bloquea un caso legítimo
 
 ---
 
-## 4. Integración con el motor
+## 4. Reescritura acotada
+
+Si Grounding, Denylist o Sales Policy bloquean la respuesta, el motor hace **un solo reintento** con el motivo del bloqueo y las tools ya ejecutadas. Si la reescritura vuelve a violar, se envía la respuesta segura. Nunca hay bucles de reescritura.
+
+## 5. Integración con el motor
 
 `agentEngine` ejecuta en orden:
 
@@ -70,7 +74,7 @@ Si una capa bloquea, se sustituye la respuesta por el mensaje seguro y se regist
 
 ---
 
-## 5. Límites
+## 6. Límites
 
 - Los guardrails son **regex + reglas deterministas**, no comprensión semántica; pueden producir falsos positivos/negativos.
 - La verificación de precio exige que el monto sea exactamente un precio del catálogo; presupuestos o rangos del cliente pueden requerir revisión.

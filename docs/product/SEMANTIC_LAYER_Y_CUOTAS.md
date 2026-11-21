@@ -70,7 +70,18 @@ Es una red determinista; el prompt también incluye la regla 11 de alcance. No p
 
 ---
 
-## 4. Cuota por conversación
+## 4. RAG por pack
+
+`packs/<rubro>/pack.json` puede declarar `knowledge`:
+
+- políticas, garantía, financiamiento, plazos, requisitos;
+- cada documento tiene `id`, `title`, `content`, `tags`, `source`;
+- la tool `search_knowledge` recupera por tokens/sinónimos y devuelve `found/confidence/documents`;
+- el prompt exige citar la fuente y, si no hay documento, ofrecer un asesor.
+
+Es RAG léxico, no embeddings. La ventaja: determinista, barato y auditable; la limitación: no entiende paráfrasis profundas.
+
+## 5. Cuota por conversación
 
 | Variable | Default | Efecto |
 | :--- | :--- | :--- |
@@ -88,7 +99,7 @@ Si la consulta de cuota falla, se permite el turno y se registra el error: la pr
 
 ---
 
-## 5. Límites
+## 6. Límites
 
 - La semántica es léxica (sinónimos + fuzzy), no comprensión profunda.
 - La cuota es por conversación, no por usuario/canal global. 100k es un techo de costo, no una promesa de conversación infinita.

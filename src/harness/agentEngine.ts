@@ -247,31 +247,94 @@ export class AgentEngine {
         'He verificado la información en nuestro sistema. ¿En qué más puedo orientarte o deseas que un asesor te asista directamente?';
     }
 
-    // 4. Guardrail Nivel 3: Grounding Lock (F3-C3)
-    const groundingCheck = guardrails.checkGroundingLock(finalBotText, catalogToolExecuted);
-    if (!groundingCheck.passed && groundingCheck.sanitizedResponse) {
-      finalBotText = groundingCheck.sanitizedResponse;
-    }
-
-    // 5. Guardrail Nivel 4: Denylist Post-Inferencia
-    const denylistCheck = guardrails.checkPostInferenceDenylist(finalBotText);
-    if (!denylistCheck.passed && denylistCheck.sanitizedResponse) {
-      finalBotText = denylistCheck.sanitizedResponse;
-    }
-
-    // 6. Guardrail de ventas: precios, crédito, disponibilidad, test drive y descuentos
+    // 4. Verificación determinista de la respuesta final
     const allowedPrices = pack
       ? pack.catalog.map((item) => item.price)
       : OFFICIAL_CATALOG.map((item) => item.priceUSD);
-    const salesCheck = checkSalesPolicy(finalBotText, {
-      catalogToolExecuted,
-      leadToolExecuted,
-      handoffToolExecuted,
-      executedTools: Array.from(executedTools),
-      allowedPrices,
-    });
-    if (!salesCheck.passed && salesCheck.sanitizedResponse) {
-      finalBotText = salesCheck.sanitizedResponse;
+
+    const evaluateFinalText = (
+      text: string
+    ): { passed: boolean; reason?: string; safeResponse: string } => {
+      const groundingCheck = guardrails.checkGroundingLock(text, catalogToolExecuted);
+      if (!groundingCheck.passed && groundingCheck.sanitizedResponse) {
+        return {
+          passed: false,
+          reason: groundingCheck.violationReason ?? 'UNGROUNDED_PRICE_MENTION',
+          safeResponse: groundingCheck.sanitizedResponse,
+        };
+      }
+
+      const denylistCheck = guardrails.checkPostInferenceDenylist(text);
+      if (!denylistCheck.passed && denylistCheck.sanitizedResponse) {
+        return {
+          passed: false,
+          reason: denylistCheck.violationReason ?? 'DENYLIST_CONTENT_DETECTED',
+          safeResponse: denylistCheck.sanitizedResponse,
+        };
+      }
+
+      const salesCheck = checkSalesPolicy(text, {
+        catalogToolExecuted,
+        leadToolExecuted,
+        handoffToolExecuted,
+        executedTools: Array.from(executedTools),
+        allowedPrices,
+      });
+      if (!salesCheck.passed && salesCheck.sanitizedResponse) {
+        return {
+          passed: false,
+          reason: salesCheck.violationReason ?? 'SALES_POLICY_VIOLATION',
+          safeResponse: salesCheck.sanitizedResponse,
+        };
+      }
+
+      return { passed: true, safeResponse: text };
+    };
+
+    let evaluation = evaluateFinalText(finalBotText);
+
+    // 5. Reescritura acotada: una oportunidad para corregir sin perder el turno
+    if (!evaluation.passed) {
+      const remainingBudget = options?.deadlineMs
+        ? Math.max(1000, options.deadlineMs - Date.now())
+        : 20000;
+      const rewriteInstruction = `${preparedContext.systemInstruction}
+<rewrite_instruction>
+Tu respuesta anterior fue bloqueada por la política "${evaluation.reason}".
+Reescribe la respuesta al cliente usando SOLO hechos de las tools/catálogo.
+Si falta información, haz UNA sola pregunta de aclaración o deriva a un asesor.
+No repitas la infracción. Mantén el idioma, el tono y la brevedad.
+</rewrite_instruction>`;
+
+      try {
+        const rewrite = await llmClient.generateTurn(
+          rewriteInstruction,
+          activeMessages,
+          Math.min(20000, remainingBudget),
+          options?.abortSignal,
+          []
+        );
+        totalPromptTokens += rewrite.promptTokens;
+        totalCompletionTokens += rewrite.completionTokens;
+
+        const rewritten = rewrite.text?.trim() ?? '';
+        if (rewritten) {
+          const rewrittenEvaluation = evaluateFinalText(rewritten);
+          finalBotText = rewrittenEvaluation.passed
+            ? rewritten
+            : rewrittenEvaluation.safeResponse;
+        } else {
+          finalBotText = evaluation.safeResponse;
+        }
+      } catch (rewriteError) {
+        logger.warn(
+          { error: rewriteError instanceof Error ? rewriteError.message : 'unknown' },
+          'Reescritura de guardrail falló; se usa respuesta segura'
+        );
+        finalBotText = evaluation.safeResponse;
+      }
+
+      evaluation = evaluateFinalText(finalBotText);
     }
 
     const totalLatencyMs = Date.now() - startEngineTime;

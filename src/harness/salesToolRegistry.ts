@@ -1,6 +1,7 @@
 import { z } from 'zod';
 import { BusinessPack } from '../core/types.js';
 import { JsonCatalogProvider } from '../core/catalogProvider.js';
+import { JsonKnowledgeProvider } from '../core/knowledgeProvider.js';
 import { ToolRegistry } from '../core/toolRegistry.js';
 import { searchProductCatalog } from './tools/catalogTools.js';
 import { createQualifiedLead } from './tools/leadTools.js';
@@ -103,6 +104,10 @@ export function buildSalesToolRegistry(pack: BusinessPack | null): ToolRegistry 
   }
 
   const catalog = new JsonCatalogProvider(pack.catalog, {
+    synonyms: pack.search?.synonyms,
+    minScore: pack.search?.minScore,
+  });
+  const knowledge = new JsonKnowledgeProvider(pack.knowledge, {
     synonyms: pack.search?.synonyms,
     minScore: pack.search?.minScore,
   });
@@ -264,6 +269,23 @@ export function buildSalesToolRegistry(pack: BusinessPack | null): ToolRegistry 
       ),
   });
 
+  registry.register({
+    name: 'search_knowledge',
+    description: 'Busca políticas, garantía, financiamiento y preguntas frecuentes del negocio.',
+    parameters: {
+      type: 'object',
+      properties: {
+        query: { type: 'string' },
+        limit: { type: 'number' },
+      },
+      required: ['query'],
+    },
+    inputSchema: z.object({
+      query: z.string().min(1),
+      limit: z.number().int().min(1).max(5).optional(),
+    }),
+    execute: (input) => knowledge.search(input.query, input.limit),
+  });
   registry.register({
     name: 'capture_lead',
     description: 'Registra los datos de contacto y calificación del cliente.',

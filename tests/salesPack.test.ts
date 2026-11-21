@@ -6,6 +6,7 @@ import { JsonCatalogProvider } from '../src/core/catalogProvider.js';
 import { loadBusinessPack } from '../src/core/businessProfile.js';
 import { buildSalesToolRegistry } from '../src/harness/salesToolRegistry.js';
 import { contextManager } from '../src/harness/contextManager.js';
+import { JsonKnowledgeProvider } from '../src/core/knowledgeProvider.js';
 import {
   ToolInputError,
   ToolNotFoundError,
@@ -231,5 +232,30 @@ describe('Sales Pack base', () => {
     expect(result.found).toBe(true);
     expect(result.confidence).toBeGreaterThan(0);
     expect(result.items.length).toBeGreaterThan(0);
+  });
+  it('recupera conocimiento del pack y distingue no-match', async () => {
+    const pack = await loadBusinessPack(packPath);
+    const knowledge = new JsonKnowledgeProvider(pack.knowledge);
+
+    const financing = knowledge.search('¿Cómo funciona el financiamiento?');
+    expect(financing.found).toBe(true);
+    expect(financing.documents[0].id).toBe('financing');
+
+    const warranty = knowledge.search('¿Qué garantía tiene el vehículo?');
+    expect(warranty.found).toBe(true);
+    expect(warranty.documents[0].id).toBe('warranty');
+
+    expect(knowledge.search('color favorito').found).toBe(false);
+  });
+
+  it('expone search_knowledge en el registry del pack', async () => {
+    const pack = await loadBusinessPack(packPath);
+    const registry = buildSalesToolRegistry(pack);
+    const result = (await registry.execute('search_knowledge', {
+      query: 'requisitos para test drive',
+    })) as { found: boolean; documents: Array<{ id: string }> };
+
+    expect(result.found).toBe(true);
+    expect(result.documents[0].id).toBe('test-drive');
   });
 });
