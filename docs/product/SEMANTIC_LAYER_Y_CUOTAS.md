@@ -75,9 +75,9 @@ Es una red determinista; el prompt también incluye la regla 11 de alcance. No p
 | Variable | Default | Efecto |
 | :--- | :--- | :--- |
 | `MAX_CONVERSATION_TURNS` | 40 | Al alcanzar 40 mensajes inbound (turnos), se escala |
-| `MAX_CONVERSATION_TOKENS` | 60000 | Al alcanzar tokens acumulados, se escala |
+| `MAX_CONVERSATION_TOKENS` | 100000 | Techo de tokens por conversación; se escala al alcanzarlo |
 
-`ConversationQuotaService` cuenta mensajes **inbound** y suma tokens por conversación antes de llamar al LLM. Si la cuota se agotó:
+`ConversationQuotaService` cuenta mensajes **inbound** y toma el **máximo** entre tokens del historial y tokens del outbox (incluye turnos pendientes), antes de llamar al LLM. Si la cuota se agotó:
 
 - no se llama al LLM (0 tokens),
 - se crea un handoff `SYSTEM_DELAY`,
@@ -91,7 +91,7 @@ Si la consulta de cuota falla, se permite el turno y se registra el error: la pr
 ## 5. Límites
 
 - La semántica es léxica (sinónimos + fuzzy), no comprensión profunda.
-- La cuota es por conversación, no por usuario/canal global.
+- La cuota es por conversación, no por usuario/canal global. 100k es un techo de costo, no una promesa de conversación infinita.
 - El guardrail de alcance puede tener falsos positivos; se ajusta por pack.
 - No hay aún RAG de documentos ni verificación semántica de cada afirmación.
 - Falta un eval con paráfrasis reales y conversaciones del piloto.

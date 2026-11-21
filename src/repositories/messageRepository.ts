@@ -204,10 +204,15 @@ export class MessageRepository {
     conversationId: string
   ): Promise<{ messages: number; tokens: number }> {
     const query = `
-      SELECT COUNT(*) FILTER (WHERE direction = 'INBOUND')::int AS messages,
-             COALESCE(SUM(prompt_tokens + completion_tokens), 0)::bigint AS tokens
-      FROM public.messages
-      WHERE conversation_id = $1;
+      SELECT
+        (SELECT COUNT(*) FROM public.messages
+          WHERE conversation_id = $1 AND direction = 'INBOUND')::int AS messages,
+        GREATEST(
+          COALESCE((SELECT SUM(prompt_tokens + completion_tokens) FROM public.messages
+                    WHERE conversation_id = $1), 0),
+          COALESCE((SELECT SUM(prompt_tokens + completion_tokens) FROM public.outbox_messages
+                    WHERE conversation_id = $1), 0)
+        )::bigint AS tokens;
     `;
     const result = await db.query(query, [conversationId]);
     const row = result.rows[0] as { messages?: number; tokens?: string | number } | undefined;
