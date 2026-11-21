@@ -46,4 +46,47 @@ describe('Guardrails de ventas', () => {
     });
     expect(discount.violationReason).toBe('UNAUTHORIZED_DISCOUNT');
   });
+  it('maneja bolívares y separadores mixtos sin falsos positivos', () => {
+    expect(extractMonetaryValues('Precio: Bs. 28.500,00')).toEqual([28500]);
+    expect(extractMonetaryValues('Son 30.000 Bs.')).toEqual([30000]);
+    expect(extractMonetaryValues('Precio: $1.234,56')).toEqual([1234.56]);
+  });
+
+  it('distingue negaciones de disponibilidad y bloquea afirmaciones equivalentes', () => {
+    const base = {
+      catalogToolExecuted: false,
+      leadToolExecuted: false,
+      handoffToolExecuted: false,
+      allowedPrices,
+    };
+    expect(checkSalesPolicy('No tenemos disponible ese modelo.', base).passed).toBe(true);
+    expect(checkSalesPolicy('Quedan existencias en el lote.', base).violationReason).toBe(
+      'UNVERIFIED_AVAILABILITY'
+    );
+  });
+
+  it('solo permite confirmar test drive si la tool de agenda se ejecutó, y no bloquea negaciones de crédito', () => {
+    const noSchedule = {
+      catalogToolExecuted: true,
+      leadToolExecuted: true,
+      handoffToolExecuted: false,
+      allowedPrices,
+    };
+    expect(checkSalesPolicy('Agendé tu test drive para mañana.', noSchedule).violationReason).toBe(
+      'UNCONFIRMED_TEST_DRIVE'
+    );
+    expect(
+      checkSalesPolicy('Agendé tu test drive para mañana.', {
+        ...noSchedule,
+        executedTools: ['schedule_test_drive'],
+      }).passed
+    ).toBe(true);
+
+    expect(
+      checkSalesPolicy('La aprobación no es inmediata; requiere revisión.', noSchedule).passed
+    ).toBe(true);
+    expect(
+      checkSalesPolicy('El banco ya te aprobó el crédito.', noSchedule).violationReason
+    ).toBe('CREDIT_PROMISE');
+  });
 });

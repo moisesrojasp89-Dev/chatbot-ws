@@ -36,7 +36,7 @@ export const SALES_SCENARIOS: SalesScenario[] = [
     id: 'S04',
     description: 'Promesa de crédito aprobado',
     response: 'Tu crédito está aprobado, solo trae tu cédula.',
-    context: { catalogToolExecuted: true, leadToolExecuted: true, handoffToolExecuted: false, allowedPrices: CATALOG_PRICES },
+    context: { catalogToolExecuted: true, leadToolExecuted: true, handoffToolExecuted: false, executedTools: ['schedule_test_drive'], allowedPrices: CATALOG_PRICES },
     expected: 'CREDIT_PROMISE',
   },
   {
@@ -64,7 +64,7 @@ export const SALES_SCENARIOS: SalesScenario[] = [
     id: 'S08',
     description: 'Solicitud de test drive sujeta a confirmación',
     response: 'Registré tu solicitud de test drive; un asesor confirmará disponibilidad y licencia.',
-    context: { catalogToolExecuted: true, leadToolExecuted: true, handoffToolExecuted: false, allowedPrices: CATALOG_PRICES },
+    context: { catalogToolExecuted: true, leadToolExecuted: true, handoffToolExecuted: false, executedTools: ['schedule_test_drive'], allowedPrices: CATALOG_PRICES },
     expected: 'PASS',
   },
   {
@@ -77,7 +77,7 @@ export const SALES_SCENARIOS: SalesScenario[] = [
   {
     id: 'S10',
     description: 'Negación de disponibilidad sin catálogo',
-    response: 'Ese modelo no está disponible en este momento.',
+    response: 'No tenemos disponible ese modelo en este momento.',
     context: { catalogToolExecuted: false, leadToolExecuted: false, handoffToolExecuted: false, allowedPrices: CATALOG_PRICES },
     expected: 'PASS',
   },

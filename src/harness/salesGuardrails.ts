@@ -11,6 +11,8 @@ export interface SalesPolicyContext {
   catalogToolExecuted: boolean;
   leadToolExecuted: boolean;
   handoffToolExecuted: boolean;
+  /** Nombres de tools ejecutadas con éxito (p. ej. schedule_test_drive). */
+  executedTools?: string[];
   allowedPrices?: number[];
 }
 
@@ -23,22 +25,32 @@ export interface SalesPolicyResult {
 const CREDIT_PROMISE_PATTERNS = [
   /cr[eé]dito\s+(?:est[aá]\s+)?(?:aprobado|preaprobado|garantizado)/i,
   /aprobaci[oó]n\s+(?:garantizada|inmediata|segura|asegurada)/i,
+  /ya\s+te\s+aprob[oó]\s+el\s+cr[eé]dito/i,
   /sin\s+requisitos/i,
   /100\s*%\s*(?:aprobado|garantizado)/i,
 ];
 
+const CREDIT_NEGATION_PATTERN =
+  /(?:no|nunca)\s+(?:es|est[aá]|se\s+considera)\s+(?:aprobad|garantiz|inmediat)/i;
+
 const TEST_DRIVE_CONFIRM_PATTERNS = [
-  /test\s*drive\s+(?:est[aá]\s+)?(?:confirmado|reservado|agendado)/i,
-  /(?:cita|prueba)\s+(?:confirmada|reservada|agendada)\s+(?:para|del)\s+test\s*drive/i,
+  /test\s*drive\s+(?:est[aá]\s+|qued[oó]\s+|fue\s+)?(?:confirmado|reservado|agendado)/i,
+  /agend[eé]\s+(?:tu|el)\s+test\s*drive/i,
+  /te\s+espero\s+(?:mañana\s+)?(?:para|en)\s+(?:la\s+)?prueba/i,
+  /(?:cita|prueba)\s+(?:confirmada|reservada|agendada)/i,
 ];
 
 const DISCOUNT_PATTERN = /\b(?:descuento|rebaja|promoci[oó]n)\b/i;
-const DISCOUNT_VALUE_PATTERN = /\d+\s*%|\$\s*[\d.,]+/;
-const AVAILABILITY_PATTERN = /(?:disponible|en stock|[uú]ltima unidad|[uú]ltimas unidades)/i;
-const NEGATED_AVAILABILITY_PATTERN = /no\s+(?:est[aá]|se\s+encuentra)\s+disponible/i;
+const DISCOUNT_VALUE_PATTERN = /\d+\s*%|\$\s*[\d.,]+|Bs\.?\s*[\d.,]+/i;
+const AVAILABILITY_PATTERN =
+  /(?:disponible|en stock|hay existencias|existencias|queda(?:n)?\s+(?:una|solo)|lista para entrega|[uú]ltima unidad|[uú]ltimas unidades)/i;
+const NEGATED_AVAILABILITY_PATTERN =
+  /(?:no\s+(?:tenemos|hay|est[aá]|se\s+encuentra|queda)|sin\s+stock|agotad[oa]|no\s+disponible)/i;
 
 function parseMoney(raw: string): number | null {
-  const numeric = raw.replace(/[^\d.,]/g, '');
+  const numeric = raw
+    .replace(/[^\d.,]/g, '')
+    .replace(/^[.,]+|[.,]+$/g, '');
   if (!numeric) return null;
 
   const hasComma = numeric.includes(',');
@@ -46,7 +58,12 @@ function parseMoney(raw: string): number | null {
   let normalized = numeric;
 
   if (hasComma && hasDot) {
-    normalized = numeric.replace(/,/g, '');
+    const lastComma = numeric.lastIndexOf(',');
+    const lastDot = numeric.lastIndexOf('.');
+    normalized =
+      lastComma > lastDot
+        ? numeric.replace(/\./g, '').replace(',', '.')
+        : numeric.replace(/,/g, '');
   } else if (hasComma) {
     const decimals = numeric.split(',').pop()?.length ?? 0;
     normalized = decimals === 3 ? numeric.replace(/,/g, '') : numeric.replace(',', '.');
@@ -60,7 +77,10 @@ function parseMoney(raw: string): number | null {
 }
 
 export function extractMonetaryValues(text: string): number[] {
-  const matches = text.match(/(?:\$|USD|COP|MXN|€)\s*[\d.,]+|\d[\d.,]*\s*(?:USD|COP|MXN|d[oó]lares|pesos|euros)/gi) ?? [];
+  const matches =
+    text.match(
+      /(?:\$|USD|COP|MXN|€|Bs\.?|VES)\s*[\d.,]+|\d[\d.,]*\s*(?:USD|COP|MXN|VES|Bs\.?|d[oó]lares|pesos|euros|bol[ií]vares)/gi
+    ) ?? [];
   return matches
     .map(parseMoney)
     .filter((value): value is number => value !== null);
@@ -74,8 +94,9 @@ export function checkSalesPolicy(
   botResponse: string,
   context: SalesPolicyContext
 ): SalesPolicyResult {
+  const creditNegated = CREDIT_NEGATION_PATTERN.test(botResponse);
   for (const pattern of CREDIT_PROMISE_PATTERNS) {
-    if (pattern.test(botResponse)) {
+    if (!creditNegated && pattern.test(botResponse)) {
       logger.warn({ violation: 'CREDIT_PROMISE' }, '🛑 Guardrail de ventas: promesa de crédito');
       return {
         passed: false,
@@ -87,7 +108,7 @@ export function checkSalesPolicy(
   }
 
   for (const pattern of TEST_DRIVE_CONFIRM_PATTERNS) {
-    if (pattern.test(botResponse) && !context.leadToolExecuted) {
+    if (pattern.test(botResponse) && !context.executedTools?.includes('schedule_test_drive')) {
       logger.warn({ violation: 'UNCONFIRMED_TEST_DRIVE' }, '🛑 Guardrail de ventas: test drive confirmado sin registro');
       return {
         passed: false,

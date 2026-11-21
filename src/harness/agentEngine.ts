@@ -97,6 +97,7 @@ export class AgentEngine {
     let handoffToolExecuted = false;
     let pendingLead: CreateQualifiedLeadArgs | undefined;
     let pendingHandoff: RequestHumanHandoffArgs | undefined;
+    const executedTools = new Set<string>();
     let totalPromptTokens = 0;
     let totalCompletionTokens = 0;
     let finalBotText = '';
@@ -170,6 +171,8 @@ export class AgentEngine {
             });
             continue;
           }
+
+          executedTools.add(call.name);
 
           if (definition.effect === 'catalog') {
             catalogToolExecuted = true;
@@ -246,6 +249,7 @@ export class AgentEngine {
       catalogToolExecuted,
       leadToolExecuted,
       handoffToolExecuted,
+      executedTools: Array.from(executedTools),
       allowedPrices,
     });
     if (!salesCheck.passed && salesCheck.sanitizedResponse) {
