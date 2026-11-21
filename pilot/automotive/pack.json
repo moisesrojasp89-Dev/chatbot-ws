@@ -1,0 +1,352 @@
+{
+  "profile": {
+    "id": "piloto-automotive",
+    "name": "Automotriz Piloto",
+    "vertical": "automotive",
+    "language": "es",
+    "timezone": "America/Caracas",
+    "tone": "cálido, directo y profesional; sin presión de venta",
+    "hours": {
+      "mon-fri": "08:00-18:00",
+      "sat": "08:00-13:00"
+    },
+    "locations": ["Caracas", "Valencia"],
+    "policies": {
+      "priceCurrency": "USD",
+      "priceIncludesTax": false,
+      "testDriveRequiresLicense": true,
+      "tradeInRequiresInspection": true
+    }
+  },
+  "search": {
+    "synonyms": {
+      "camioneta": ["pickup", "suv"],
+      "carro": ["suv", "sedan", "hatchback"],
+      "coche": ["suv", "sedan", "hatchback"],
+      "automatica": ["automatic"],
+      "automatico": ["automatic"],
+      "usado": ["used"],
+      "usada": ["used"],
+      "nueva": ["new"],
+      "nuevo": ["new"],
+      "familiar": ["suv"],
+      "trabajo": ["pickup"],
+      "economico": ["hatchback", "sedan"]
+    },
+    "minScore": 0.35
+  },
+  "knowledge": [
+    {
+      "id": "financing",
+      "title": "Financiamiento de vehículos",
+      "content": "El financiamiento está sujeto a aprobación de una entidad financiera y a la documentación del cliente. El bot puede explicar el proceso y pedir datos, pero no puede aprobar crédito ni garantizar tasas.",
+      "tags": ["financiamiento", "credito", "cuota", "banco"],
+      "source": "Política comercial"
+    },
+    {
+      "id": "trade-in",
+      "title": "Permuta de vehículo",
+      "content": "La permuta requiere inspección física y valoración de un asesor. El cliente puede enviar marca, modelo, año, kilometraje y fotos; la oferta final no se confirma por chat.",
+      "tags": ["permuta", "trade in", "parte de pago", "usado"],
+      "source": "Política comercial"
+    },
+    {
+      "id": "test-drive",
+      "title": "Requisitos de test drive",
+      "content": "El test drive requiere licencia de conducir vigente, disponibilidad del vehículo y confirmación de un asesor. La solicitud por chat no equivale a una cita confirmada.",
+      "tags": ["test drive", "prueba de manejo", "licencia", "cita"],
+      "source": "Política comercial"
+    },
+    {
+      "id": "warranty",
+      "title": "Garantía de vehículos",
+      "content": "Los vehículos nuevos tienen garantía de fábrica según el fabricante. Los usados se entregan con la garantía que se indique en la ficha y contrato; no se promete garantía adicional por chat.",
+      "tags": ["garantia", "nuevo", "usado", "fabrica"],
+      "source": "Política comercial"
+    },
+    {
+      "id": "delivery",
+      "title": "Tiempos de entrega",
+      "content": "La entrega depende de la disponibilidad y del proceso de documentación. El plazo estimado se confirma con un asesor después de la compra; no se prometen fechas exactas por chat.",
+      "tags": ["entrega", "plazo", "documentacion", "disponibilidad"],
+      "source": "Política comercial"
+    }
+  ],
+  "catalog": [
+    {
+      "id": "demo-suv-rav4",
+      "name": "Toyota RAV4 2023",
+      "category": "suv",
+      "price": 28500,
+      "currency": "USD",
+      "stock": true,
+      "description": "SUV automática, única dueña, mantenimiento al día.",
+      "attributes": {
+        "make": "Toyota",
+        "model": "RAV4",
+        "year": 2023,
+        "condition": "used",
+        "transmission": "automatic",
+        "fuel": "gasoline",
+        "mileageKm": 24000,
+        "location": "Caracas",
+        "bodyType": "SUV",
+        "features": ["cámara", "carplay", "sensores"]
+      },
+      "images": ["https://placehold.co/1200x800/png?text=Toyota+RAV4+2023"]
+    },
+    {
+      "id": "demo-sedan-civic",
+      "name": "Honda Civic 2024",
+      "category": "sedan",
+      "price": 24900,
+      "currency": "USD",
+      "stock": true,
+      "description": "Sedán nuevo, automático, garantía de fábrica.",
+      "attributes": {
+        "make": "Honda",
+        "model": "Civic",
+        "year": 2024,
+        "condition": "new",
+        "transmission": "automatic",
+        "fuel": "gasoline",
+        "mileageKm": 0,
+        "location": "Valencia",
+        "bodyType": "Sedán",
+        "features": ["carplay", "asistente de carril"]
+      },
+      "images": ["https://placehold.co/1200x800/png?text=Honda+Civic+2024"]
+    },
+    {
+      "id": "demo-pickup-ranger",
+      "name": "Ford Ranger 2022",
+      "category": "pickup",
+      "price": 31500,
+      "currency": "USD",
+      "stock": false,
+      "description": "Pickup 4x4 diésel, disponible para preventa.",
+      "attributes": {
+        "make": "Ford",
+        "model": "Ranger",
+        "year": 2022,
+        "condition": "used",
+        "transmission": "automatic",
+        "fuel": "diesel",
+        "mileageKm": 41000,
+        "location": "Caracas",
+        "bodyType": "Pickup",
+        "features": ["4x4", "enganche"]
+      },
+      "images": ["https://placehold.co/1200x800/png?text=Ford+Ranger+2022"]
+    },
+    {
+      "id": "demo-sedan-onix",
+      "name": "Chevrolet Onix 2024",
+      "category": "sedan",
+      "price": 18900,
+      "currency": "USD",
+      "stock": true,
+      "description": "Sedán económico, automático, ideal para ciudad.",
+      "attributes": {
+        "make": "Chevrolet",
+        "model": "Onix",
+        "year": 2024,
+        "condition": "new",
+        "transmission": "automatic",
+        "fuel": "gasoline",
+        "mileageKm": 0,
+        "location": "Caracas",
+        "bodyType": "Sedán",
+        "features": ["pantalla", "cámara"]
+      },
+      "images": ["https://placehold.co/1200x800/png?text=Chevrolet+Onix+2024"]
+    },
+    {
+      "id": "demo-suv-cx5",
+      "name": "Mazda CX-5 2023",
+      "category": "suv",
+      "price": 27900,
+      "currency": "USD",
+      "stock": true,
+      "description": "SUV automática, interior premium, bajo kilometraje.",
+      "attributes": {
+        "make": "Mazda",
+        "model": "CX-5",
+        "year": 2023,
+        "condition": "used",
+        "transmission": "automatic",
+        "fuel": "gasoline",
+        "mileageKm": 18000,
+        "location": "Valencia",
+        "bodyType": "SUV",
+        "features": ["techo panorámico", "cuero"]
+      },
+      "images": ["https://placehold.co/1200x800/png?text=Mazda+CX-5+2023"]
+    },
+    {
+      "id": "demo-suv-tucson",
+      "name": "Hyundai Tucson 2024",
+      "category": "suv",
+      "price": 29900,
+      "currency": "USD",
+      "stock": true,
+      "description": "SUV nueva, automática, garantía de fábrica.",
+      "attributes": {
+        "make": "Hyundai",
+        "model": "Tucson",
+        "year": 2024,
+        "condition": "new",
+        "transmission": "automatic",
+        "fuel": "gasoline",
+        "mileageKm": 0,
+        "location": "Caracas",
+        "bodyType": "SUV",
+        "features": ["carplay", "cámara 360"]
+      },
+      "images": ["https://placehold.co/1200x800/png?text=Hyundai+Tucson+2024"]
+    },
+    {
+      "id": "demo-suv-sportage",
+      "name": "Kia Sportage 2023",
+      "category": "suv",
+      "price": 26500,
+      "currency": "USD",
+      "stock": true,
+      "description": "SUV automática, familiar, mantenimiento certificado.",
+      "attributes": {
+        "make": "Kia",
+        "model": "Sportage",
+        "year": 2023,
+        "condition": "used",
+        "transmission": "automatic",
+        "fuel": "gasoline",
+        "mileageKm": 21000,
+        "location": "Valencia",
+        "bodyType": "SUV",
+        "features": ["carplay", "sensores"]
+      },
+      "images": ["https://placehold.co/1200x800/png?text=Kia+Sportage+2023"]
+    },
+    {
+      "id": "demo-sedan-versa",
+      "name": "Nissan Versa 2024",
+      "category": "sedan",
+      "price": 17900,
+      "currency": "USD",
+      "stock": true,
+      "description": "Sedán nuevo económico, manual, bajo consumo.",
+      "attributes": {
+        "make": "Nissan",
+        "model": "Versa",
+        "year": 2024,
+        "condition": "new",
+        "transmission": "manual",
+        "fuel": "gasoline",
+        "mileageKm": 0,
+        "location": "Caracas",
+        "bodyType": "Sedán",
+        "features": ["pantalla", "aire"]
+      },
+      "images": ["https://placehold.co/1200x800/png?text=Nissan+Versa+2024"]
+    },
+    {
+      "id": "demo-pickup-hilux",
+      "name": "Toyota Hilux 2023",
+      "category": "pickup",
+      "price": 34900,
+      "currency": "USD",
+      "stock": true,
+      "description": "Pickup 4x4 diésel, lista para trabajo.",
+      "attributes": {
+        "make": "Toyota",
+        "model": "Hilux",
+        "year": 2023,
+        "condition": "used",
+        "transmission": "automatic",
+        "fuel": "diesel",
+        "mileageKm": 32000,
+        "location": "Valencia",
+        "bodyType": "Pickup",
+        "features": ["4x4", "enganche", "bedliner"]
+      },
+      "images": ["https://placehold.co/1200x800/png?text=Toyota+Hilux+2023"]
+    },
+    {
+      "id": "demo-suv-cherokee",
+      "name": "Jeep Grand Cherokee 2022",
+      "category": "suv",
+      "price": 38900,
+      "currency": "USD",
+      "stock": true,
+      "description": "SUV premium 4x4, cuero, alto equipamiento.",
+      "attributes": {
+        "make": "Jeep",
+        "model": "Grand Cherokee",
+        "year": 2022,
+        "condition": "used",
+        "transmission": "automatic",
+        "fuel": "gasoline",
+        "mileageKm": 37000,
+        "location": "Caracas",
+        "bodyType": "SUV",
+        "features": ["4x4", "cuero", "techo"]
+      },
+      "images": ["https://placehold.co/1200x800/png?text=Jeep+Grand+Cherokee+2022"]
+    },
+    {
+      "id": "demo-suv-duster",
+      "name": "Renault Duster 2023",
+      "category": "suv",
+      "price": 19500,
+      "currency": "USD",
+      "stock": true,
+      "description": "SUV económica, manual, ideal para terreno mixto.",
+      "attributes": {
+        "make": "Renault",
+        "model": "Duster",
+        "year": 2023,
+        "condition": "used",
+        "transmission": "manual",
+        "fuel": "gasoline",
+        "mileageKm": 26000,
+        "location": "Valencia",
+        "bodyType": "SUV",
+        "features": ["aire", "sensores"]
+      },
+      "images": ["https://placehold.co/1200x800/png?text=Renault+Duster+2023"]
+    },
+    {
+      "id": "demo-hatch-gol",
+      "name": "Volkswagen Gol 2022",
+      "category": "hatchback",
+      "price": 13900,
+      "currency": "USD",
+      "stock": true,
+      "description": "Hatchback económico, manual, bajo consumo.",
+      "attributes": {
+        "make": "Volkswagen",
+        "model": "Gol",
+        "year": 2022,
+        "condition": "used",
+        "transmission": "manual",
+        "fuel": "gasoline",
+        "mileageKm": 45000,
+        "location": "Caracas",
+        "bodyType": "Hatchback",
+        "features": ["aire", "pantalla"]
+      },
+      "images": ["https://placehold.co/1200x800/png?text=Volkswagen+Gol+2022"]
+    }
+  ],
+  "prompt": {
+    "persona": "Asesor de ventas de Automotriz Piloto",
+    "rules": [
+      "No inventar precio, stock, año ni kilometraje.",
+      "Confirmar ciudad y forma de pago antes de cotizar.",
+      "No prometer aprobación de crédito.",
+      "Ofrecer test drive solo si el cliente tiene licencia.",
+      "Derivar a un asesor ante financiamiento complejo o queja.",
+      "Si no hay vehículo que coincida, ofrecer alternativas y preguntar una sola cosa."
+    ]
+  }
+}
