@@ -63,7 +63,7 @@ export class ToolRegistry {
       function: {
         name: tool.name,
         description: tool.description,
-        parameters: tool.parameters,
+        parameters: JSON.parse(JSON.stringify(tool.parameters)) as LlmTool['function']['parameters'],
       },
     }));
   }

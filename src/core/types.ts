@@ -1,16 +1,18 @@
 import { z } from 'zod';
 
-export const catalogItemSchema = z.object({
-  id: z.string().min(1),
-  name: z.string().min(1),
-  category: z.string().min(1),
-  price: z.number().nonnegative(),
-  currency: z.string().min(1),
-  stock: z.boolean().default(true),
-  description: z.string().optional(),
-  attributes: z.record(z.unknown()).default({}),
-  images: z.array(z.string().url()).default([]),
-});
+export const catalogItemSchema = z
+  .object({
+    id: z.string().min(1),
+    name: z.string().min(1),
+    category: z.string().min(1),
+    price: z.number().nonnegative(),
+    currency: z.string().min(1),
+    stock: z.boolean().default(true),
+    description: z.string().optional(),
+    attributes: z.record(z.unknown()).default({}),
+    images: z.array(z.string().url()).default([]),
+  })
+  .strict();
 
 export const businessProfileSchema = z.object({
   id: z.string().min(1),

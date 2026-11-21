@@ -39,29 +39,40 @@
 
 ## 3. Catálogo
 
-### 3.1 Atributos por vehículo
+### 3.1 Forma genérica del ítem
+
+El núcleo solo conoce esta forma; lo automotriz va en `attributes`.
 
 | Campo | Tipo | Obligatorio |
 | :--- | :--- | :--- |
 | `id` | string | sí |
+| `name` | string | sí |
+| `category` | string | sí |
+| `price` | number | sí |
+| `currency` | string | sí |
+| `stock` | boolean | sí |
+| `description` | string | no |
+| `attributes` | object | sí |
+| `images` | string[] | no |
+
+### 3.2 Atributos automotrices (dentro de `attributes`)
+
+| Atributo | Tipo | Obligatorio |
+| :--- | :--- | :--- |
 | `make` | string | sí |
 | `model` | string | sí |
 | `year` | number | sí |
 | `version` | string | no |
 | `condition` | `new` \| `used` | sí |
-| `price` | number | sí |
-| `currency` | string | sí |
 | `mileageKm` | number | usado |
 | `transmission` | `manual` \| `automatic` | sí |
 | `fuel` | `gasoline` \| `diesel` \| `hybrid` \| `electric` | sí |
 | `bodyType` | string | no |
 | `color` | string | no |
 | `location` | string | sí |
-| `available` | boolean | sí |
-| `images` | string[] | no |
 | `features` | string[] | no |
 
-### 3.2 Reglas de grounding
+### 3.3 Reglas de grounding
 
 - El bot **no inventa** precio, stock, año, kilometraje ni disponibilidad.
 - Toda cifra sale de `search_inventory` o `get_vehicle_details`.
@@ -218,7 +229,7 @@ Métricas: precisión de catálogo, campos capturados, cita solicitada, handoff 
 ## 9. Implementación por fases
 
 1. **4A.1** `BusinessProfile` + `CatalogProvider` (JSON/DB) y catálogo seed.
-2. **4A.2** `ToolRegistry` y tools del pack.
+2. **4A.2** Tools reales del pack usando el `ToolRegistry` de 4A.1.
 3. **4A.3** Prompt builder por pack/canal.
 4. **4A.4** Calificación configurable y lead.
 5. **4A.5** Evaluaciones.

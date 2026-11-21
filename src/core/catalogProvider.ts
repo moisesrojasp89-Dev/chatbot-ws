@@ -5,16 +5,31 @@ export interface CatalogQuery {
   category?: string;
   attributes?: Record<string, unknown>;
   limit?: number;
+  includeOutOfStock?: boolean;
+}
+
+export interface CatalogSearchResult {
+  items: CatalogItem[];
+  total: number;
 }
 
 export interface CatalogProvider {
-  search(query: CatalogQuery): CatalogItem[];
+  search(query: CatalogQuery): CatalogSearchResult;
   get(id: string): CatalogItem | null;
+}
+
+function normalize(value: string): string {
+  return value
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .toLowerCase()
+    .trim();
 }
 
 /**
  * Proveedor de catálogo en memoria a partir de un pack JSON.
- * Búsqueda simple y determinista: texto, categoría y atributos exactos.
+ * Búsqueda determinista: texto, categoría y atributos (comparación por string).
+ * Por defecto excluye ítems sin stock; el llamador puede incluir agotados.
  */
 export class JsonCatalogProvider implements CatalogProvider {
   private readonly items: CatalogItem[];
@@ -23,37 +38,40 @@ export class JsonCatalogProvider implements CatalogProvider {
     this.items = [...items];
   }
 
-  public search(query: CatalogQuery): CatalogItem[] {
-    const text = (query.text ?? '').toLowerCase().trim();
-    const category = (query.category ?? '').toLowerCase().trim();
-    const limit = Math.max(1, Math.min(query.limit ?? 5, 20));
+  public search(query: CatalogQuery): CatalogSearchResult {
+    const text = normalize(query.text ?? '');
+    const category = normalize(query.category ?? '');
+    const limit = Math.min(Math.max(query.limit ?? 5, 1), 20);
 
     const matches = this.items.filter((item) => {
-      if (category && item.category.toLowerCase() !== category) return false;
+      if (!query.includeOutOfStock && !item.stock) return false;
+      if (category && normalize(item.category) !== category) return false;
 
       if (query.attributes) {
         for (const [key, value] of Object.entries(query.attributes)) {
-          if (item.attributes[key] !== value) return false;
+          if (String(item.attributes[key]) !== String(value)) return false;
         }
       }
 
       if (!text) return true;
 
-      const haystack = [
-        item.name,
-        item.category,
-        item.description ?? '',
-        ...Object.values(item.attributes).map((value) => String(value)),
-      ]
-        .join(' ')
-        .toLowerCase();
+      const haystack = normalize(
+        [
+          item.name,
+          item.category,
+          item.description ?? '',
+          ...Object.values(item.attributes).map((value) => String(value)),
+        ].join(' ')
+      );
 
       return text.split(/\s+/).every((token) => haystack.includes(token));
     });
 
-    return matches
-      .sort((a, b) => Number(b.stock) - Number(a.stock) || a.name.localeCompare(b.name))
-      .slice(0, limit);
+    const sorted = matches.sort(
+      (a, b) => Number(b.stock) - Number(a.stock) || a.name.localeCompare(b.name)
+    );
+
+    return { items: sorted.slice(0, limit), total: sorted.length };
   }
 
   public get(id: string): CatalogItem | null {

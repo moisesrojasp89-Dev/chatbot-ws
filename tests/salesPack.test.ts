@@ -44,13 +44,20 @@ describe('Sales Pack base', () => {
     const pack = await loadBusinessPack(packPath);
     const catalog = new JsonCatalogProvider(pack.catalog);
 
-    expect(catalog.search({ text: 'RAV4' }).map((item) => item.id)).toEqual(['suv-001']);
-    expect(catalog.search({ category: 'sedan' }).map((item) => item.id)).toEqual(['sedan-001']);
-    expect(
-      catalog.search({ attributes: { transmission: 'automatic', location: 'Caracas' } }).map(
-        (item) => item.id
-      )
-    ).toEqual(['suv-001', 'pickup-001']);
+    expect(catalog.search({ text: 'RAV4' }).items.map((item) => item.id)).toEqual(['suv-001']);
+    expect(catalog.search({ category: 'sedan' }).items.map((item) => item.id)).toEqual(['sedan-001']);
+    const automaticCaracas = catalog.search({
+      attributes: { transmission: 'automatic', location: 'Caracas' },
+    });
+    expect(automaticCaracas.items.map((item) => item.id)).toEqual(['suv-001']);
+    expect(automaticCaracas.total).toBe(1);
+
+    const withOutOfStock = catalog.search({
+      attributes: { transmission: 'automatic', location: 'Caracas' },
+      includeOutOfStock: true,
+    });
+    expect(withOutOfStock.items.map((item) => item.id)).toEqual(['suv-001', 'pickup-001']);
+    expect(withOutOfStock.total).toBe(2);
     expect(catalog.get('no-existe')).toBeNull();
   });
 
@@ -59,8 +66,9 @@ describe('Sales Pack base', () => {
     const catalog = new JsonCatalogProvider(pack.catalog);
 
     const results = catalog.search({ limit: 2 });
-    expect(results).toHaveLength(2);
-    expect(results[0].stock).toBe(true);
+    expect(results.items).toHaveLength(2);
+    expect(results.total).toBe(2);
+    expect(results.items.every((item) => item.stock)).toBe(true);
   });
 
   it('registra tools, las expone al LLM y ejecuta con validación', async () => {
@@ -99,5 +107,13 @@ describe('Sales Pack base', () => {
 
     registry.register(definition);
     expect(() => registry.register(definition)).toThrow(/duplicada/);
+  });
+  it('rechaza JSON malformado y rutas fuera del directorio permitido', async () => {
+    const malformedPath = path.join(process.cwd(), '.tmp_malformed_pack.json');
+    tempFiles.push(malformedPath);
+    await fs.writeFile(malformedPath, '{ no-json', 'utf8');
+
+    await expect(loadBusinessPack(malformedPath)).rejects.toThrow(/JSON válido/);
+    await expect(loadBusinessPack('../outside-pack.json')).rejects.toThrow(/directorio permitido/);
   });
 });
