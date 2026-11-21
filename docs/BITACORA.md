@@ -23,6 +23,7 @@
 | c38dd4e | **Ola 3C:** conversaciones/FSM/handoff aislados por chat_id; migración 018. | 198 tests | PASS con reservas; residuales corregidos |
 | c2f8763 | **Ola 3D:** media de Telegram normalizada (foto/documento/audio/video) con caption; sin descarga ni visión. | 201 tests | PASS con reservas; residuales corregidos |
 | b7bfe15 | **Ola 3E:** pipeline real de media — descarga en dispatcher, límite de tamaño, almacenamiento por hash, ruta en payload y purga por retención. | 208 tests | PASS |
+| — | **Ola 4A (docs):** Sales Readiness Audit y especificación del pack automotriz; sin cambios de código. | 208 tests | Pendiente de implementación |
 
 ### Decisiones registradas
 

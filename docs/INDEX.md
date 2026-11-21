@@ -62,7 +62,16 @@ La documentación está organizada bajo el estándar de **Modularización Jerár
 
 ---
 
-## 📦 5. Archivo Histórico, Expedientes y Auditorías
+## 🧩 5. Producto y Packs
+
+| Documento | Descripción / Alcance | Nivel |
+| :--- | :--- | :---: |
+| [**`SALES_READINESS_AUDIT.md`**](file:///c:/Users/indatech/Desktop/Chatbot%20WS/docs/product/SALES_READINESS_AUDIT.md) | Auditoría de readiness del bot de ventas: qué es genérico, qué está sesgado y qué falta para un piloto real. | L1 - Producto |
+| [**`AUTOMOTIVE_PACK_SPEC.md`**](file:///c:/Users/indatech/Desktop/Chatbot%20WS/docs/packs/AUTOMOTIVE_PACK_SPEC.md) | Especificación del pack piloto automotriz: catálogo, tools, flujos, evaluación. Solo para pruebas. | L1 - Pack |
+
+---
+
+## 📦 6. Archivo Histórico, Expedientes y Auditorías
 📂 [**`docs/archive/`**](file:///c:/Users/indatech/Desktop/Chatbot%20WS/docs/archive/README.md)
 
 | Documento | Descripción / Alcance | Fase |

@@ -70,10 +70,13 @@ El repositorio adopta el estándar institucional de modularización y arnés de 
 Chatbot WS/
 ├── AGENTS.md                    # Mandato institucional para Antigravity, Claude, Cursor y agentes IA
 ├── docs/                        # Documentación técnica modularizada por dominio
-│   ├── INDEX.md                 # Mapa de navegación central y taxonomía documental`n│   ├── BITACORA.md              # Bitácora cronológica: cambios, decisiones, evidencia y deuda
+│   ├── INDEX.md                 # Mapa de navegación central y taxonomía documental
+│   ├── BITACORA.md              # Bitácora cronológica: cambios, decisiones, evidencia y deuda
 │   ├── architecture/            # Diseños de arquitectura técnica, multitenancy y despliegue
 │   ├── standards_and_harness/   # Estándares de ingeniería y catálogo de errores con auto-aprendizaje
 │   │   └── self_learning_error_catalog.md # Catálogo 5-Whys y tripwires de regresión (ERR-001 a ERR-008)
+│   ├── product/                 # Auditoría de readiness y estrategia de producto de ventas
+│   ├── packs/                   # Especificaciones de packs por rubro (piloto automotriz)
 │   ├── commercial_and_business/ # Análisis comercial, pricing y unit economics
 │   ├── changelog/               # Bitácora modular por componente (Webhook, LLM, DB, Infra)
 │   └── archive/                 # Expedientes de certificación, auditorías y registros históricos
