@@ -57,6 +57,9 @@ const envSchema = z.object({
   MEDIA_STORAGE_DIR: z.string().default('./media'),
   MEDIA_MAX_BYTES: z.coerce.number().int().positive().default(10 * 1024 * 1024),
   MEDIA_RETENTION_DAYS: z.coerce.number().int().positive().default(7),
+  // Cuotas anti-bucle por conversación (no por proceso)
+  MAX_CONVERSATION_TURNS: z.coerce.number().int().positive().default(40),
+  MAX_CONVERSATION_TOKENS: z.coerce.number().int().positive().default(60000),
   // Webhook opcional de on-call compatible con Slack/genérico. Solo HTTPS.
   ALERT_WEBHOOK_URL: z.preprocess(
     (value) => (typeof value === 'string' && value.trim() === '' ? undefined : value),

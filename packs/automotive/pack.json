@@ -18,7 +18,22 @@
       "tradeInRequiresInspection": true
     }
   },
-  "catalog": [
+  "search": {
+    "synonyms": {
+      "camioneta": ["pickup", "suv"],
+      "carro": ["suv", "sedan"],
+      "coche": ["suv", "sedan"],
+      "automatica": ["automatic"],
+      "automatico": ["automatic"],
+      "usado": ["used"],
+      "usada": ["used"],
+      "nueva": ["new"],
+      "nuevo": ["new"],
+      "diesel": ["diesel"],
+      "familia": ["suv"]
+    },
+    "minScore": 0.35
+  },  "catalog": [
     {
       "id": "suv-001",
       "name": "Toyota RAV4 2023",

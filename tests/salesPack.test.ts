@@ -198,4 +198,38 @@ describe('Sales Pack base', () => {
     );
     expect(tradeIn).toMatchObject({ success: true, leadId: 'staged-lead' });
   });
+  it('encuentra por sinónimos y tolera typos, distinguiendo no-match', async () => {
+    const pack = await loadBusinessPack(packPath);
+    const catalog = new JsonCatalogProvider(pack.catalog, {
+      synonyms: pack.search?.synonyms,
+      minScore: pack.search?.minScore,
+    });
+
+    const pickup = catalog.search({ text: 'camioneta', includeOutOfStock: true });
+    expect(pickup.found).toBe(true);
+    expect(pickup.items.map((item) => item.id)).toContain('pickup-001');
+
+    const typo = catalog.search({ text: 'RAV-4' });
+    expect(typo.found).toBe(true);
+    expect(typo.items[0].id).toBe('suv-001');
+    expect(typo.alternatives.map((item) => item.id)).not.toContain('suv-001');
+
+    const noMatch = catalog.search({ text: 'helicoptero' });
+    expect(noMatch.found).toBe(false);
+    expect(noMatch.items).toEqual([]);
+  });
+
+  it('devuelve found/confidence/alternativas desde search_inventory', async () => {
+    const pack = await loadBusinessPack(packPath);
+    const registry = buildSalesToolRegistry(pack);
+
+    const result = (await registry.execute('search_inventory', { text: 'coche automático' })) as {
+      found: boolean;
+      confidence: number;
+      items: Array<{ id: string }>;
+    };
+    expect(result.found).toBe(true);
+    expect(result.confidence).toBeGreaterThan(0);
+    expect(result.items.length).toBeGreaterThan(0);
+  });
 });

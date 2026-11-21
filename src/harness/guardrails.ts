@@ -34,6 +34,18 @@ export const DENYLIST_PATTERNS = [
   /(?:hijo de puta|estafadores de mierda|malditos ladrones)/i,
 ];
 
+/**
+ * Temas fuera de alcance para un bot de ventas/atención.
+ * Es una red determinista; el prompt también refuerza el alcance.
+ */
+export const OFF_TOPIC_PATTERNS = [
+  /(?:receta|dosis|medicamento|diagn[oó]stico m[eé]dico)/i,
+  /(?:demanda judicial|juicio|abogado|asesor[ií]a legal)/i,
+  /(?:qui[eé]n gan[oó]|elecciones|presidente|pol[ií]tica partidista)/i,
+  /(?:programar|programaci[oó]n|c[oó]digo fuente|python|javascript)/i,
+  /(?:tarea escolar|matem[aá]ticas|ensayo|poema|chiste)/i,
+  /(?:hor[oó]scopo|signo zodiacal|religi[oó]n)/i,
+];
 export interface GuardrailResult {
   passed: boolean;
   violationReason?: string;
@@ -61,6 +73,23 @@ export class GuardrailService {
     return { passed: true };
   }
 
+  /**
+   * Guardrail de alcance: impide que el bot se convierta en un asistente
+   * general y queme tokens en temas ajenos al negocio.
+   */
+  public checkScope(userMessage: string, businessName: string, vertical?: string): GuardrailResult {
+    for (const pattern of OFF_TOPIC_PATTERNS) {
+      if (pattern.test(userMessage)) {
+        logger.warn({ userMessagePreview: userMessage.slice(0, 30) }, '🚫 Guardrail de alcance: tema fuera del nicho');
+        return {
+          passed: false,
+          violationReason: 'OUT_OF_SCOPE',
+          sanitizedResponse: `Solo puedo ayudarte con consultas de ${businessName}${vertical ? ` (${vertical})` : ''}: productos, precios, disponibilidad, citas y atención. ¿Te ayudo con alguno de esos temas?`,
+        };
+      }
+    }
+    return { passed: true };
+  }
   /**
    * Nivel 3: Grounding Lock Post-Inferencia.
    * Verifica deterministamente por código que si el bot menciona precios o montos,

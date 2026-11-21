@@ -8,7 +8,7 @@ import { contactRepository } from '../repositories/contactRepository.js';
 import { conversationRepository } from '../repositories/conversationRepository.js';
 import { messageRepository } from '../repositories/messageRepository.js';
 import { outboxRepository } from '../repositories/outboxRepository.js';
-import { agentEngine } from '../harness/agentEngine.js';
+import { agentEngine, AgentProcessResult } from '../harness/agentEngine.js';
 import { executeLeadInTransaction } from '../harness/tools/leadTools.js';
 import { executeHandoffInTransaction } from '../harness/tools/handoffTools.js';
 import {
@@ -22,6 +22,7 @@ import { logger } from '../utils/logger.js';
 import { NormalizedMedia, normalizeChannelName } from '../providers/channels/channelTypes.js';
 import { channelRegistry } from '../providers/channels/channelRegistry.js';
 import { storeMedia } from './mediaStorage.js';
+import { conversationQuota } from './conversationQuota.js';
 import { ContactRecord, ConversationRecord } from '../types/states.js';
 
 export class InboundDispatcher {
@@ -463,12 +464,42 @@ export class InboundDispatcher {
         return;
       }
 
-      // 5. Inferencia LLM con presupuesto de turno determinista (24s) y AbortSignal de apagado (B6)
-      const mediaNote = await this.prepareMediaNote(primaryEvent);
-      const agentPrompt = mediaNote ? `${promptText}\n\n${mediaNote}` : promptText;
-      const turnDeadlineMs = Date.now() + 24000;
-      let decision;
-      try {
+      // 5. Cuota anti-bucle por conversación: corta antes de gastar tokens
+      const quotaDecision = await conversationQuota.check(conversation.id);
+      let decision: AgentProcessResult;
+
+      if (!quotaDecision.allowed) {
+        logger.warn(
+          {
+            conversationId: conversation.id,
+            reason: quotaDecision.reason,
+            messages: quotaDecision.usage.messages,
+            tokens: quotaDecision.usage.tokens,
+          },
+          '🛑 Conversación alcanzó su cuota: se responde una vez y se escala sin LLM'
+        );
+        decision = {
+          replyText:
+            'Para cuidar la calidad de la atención y no extender la conversación, te paso con un asesor humano. En un momento te atenderá.',
+          catalogToolExecuted: false,
+          leadToolExecuted: false,
+          handoffToolExecuted: true,
+          pendingHandoff: {
+            contactId: contact!.id,
+            conversationId: conversation.id,
+            reason: 'SYSTEM_DELAY',
+            briefing: `Cuota de conversación alcanzada (${quotaDecision.reason}). Mensajes=${quotaDecision.usage.messages}, tokens=${quotaDecision.usage.tokens}.`,
+          },
+          promptTokens: 0,
+          completionTokens: 0,
+          totalLatencyMs: 0,
+        };
+      } else {
+        // 6. Inferencia LLM con presupuesto de turno determinista (24s) y AbortSignal de apagado (B6)
+        const mediaNote = await this.prepareMediaNote(primaryEvent);
+        const agentPrompt = mediaNote ? `${promptText}\n\n${mediaNote}` : promptText;
+        const turnDeadlineMs = Date.now() + 24000;
+        try {
         decision = await this.llmBreaker.execute(
           () =>
             agentEngine.processMessage(contact!, conversation!, agentPrompt, {
@@ -560,9 +591,10 @@ export class InboundDispatcher {
 
         await this.handleTerminalInboundFailure(batch, contact!, conversation!, llmError);
         return;
+        }
       }
 
-      // 6. B4: Manejo estricto de respuesta vacía del LLM
+      // 7. B4: Manejo estricto de respuesta vacía del LLM
       if (!decision.replyText && !decision.pendingHandoff) {
         throw new Error('EMPTY_LLM_RESPONSE: El modelo no generó texto de respuesta ni ejecutó handoff');
       }

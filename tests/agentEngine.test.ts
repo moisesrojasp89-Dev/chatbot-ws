@@ -213,6 +213,19 @@ describe('Fase 3 — Motor Agéntico (ReAct Loop & Tools)', () => {
         resetActiveBusinessPack();
       }
     });
+    it('redirige un tema fuera del nicho sin llamar al LLM', async () => {
+      const spyLlm = vi.spyOn(llmClient, 'generateTurn');
+
+      const result = await agentEngine.processMessage(
+        mockContact,
+        mockConversation,
+        'Dame una receta médica para el dolor'
+      );
+
+      expect(spyLlm).not.toHaveBeenCalled();
+      expect(result.replyText).toContain('Chatbot WS');
+      expect(result.promptTokens).toBe(0);
+    });
   });
 
   describe('Simulador de Cadencia Humana (F3-C2)', () => {

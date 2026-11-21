@@ -32,6 +32,8 @@ Copia `.env.example` a `.env` y completa:
 | `LLM_MODEL` | `gpt-4o-mini` | Modelo con soporte de function calling |
 | `CHANNELS_ENABLED` | `whatsapp` o `whatsapp,telegram` | Canales activos; cada uno exige su configuración |
 | `BUSINESS_PACK_PATH` | `packs/automotive/pack.json` | Opcional: perfil/catálogo/prompt del negocio |
+| `MAX_CONVERSATION_TURNS` | `40` | Cuota de mensajes por conversación; al alcanzarla se escala sin LLM |
+| `MAX_CONVERSATION_TOKENS` | `60000` | Cuota de tokens por conversación; corta bucles |
 | `BACKLOG_ALERT_THRESHOLD` | `100` | Desde este umbral el log `CHANNEL_BACKLOG` pasa de `warn` a `error` |
 | `MEDIA_STORAGE_ENABLED` | `true` | Descarga/almacena media en el dispatcher |
 | `MEDIA_STORAGE_DIR` | `./media` | Directorio local; debe estar fuera de git |

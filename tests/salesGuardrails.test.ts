@@ -4,6 +4,7 @@ import {
   extractMonetaryValues,
 } from '../src/harness/salesGuardrails.js';
 import { runSalesGuardrailScenarios } from '../src/harness/salesScenarios.js';
+import { guardrails } from '../src/harness/guardrails.js';
 
 const allowedPrices = [28500, 24900, 31500];
 
@@ -88,5 +89,15 @@ describe('Guardrails de ventas', () => {
     expect(
       checkSalesPolicy('El banco ya te aprobó el crédito.', noSchedule).violationReason
     ).toBe('CREDIT_PROMISE');
+  });
+  it('redirige temas fuera del nicho sin llamar al LLM', () => {
+    const offTopic = guardrails.checkScope('Dame una receta médica para el dolor', 'Automotriz Demo', 'automotive');
+    expect(offTopic.passed).toBe(false);
+    expect(offTopic.violationReason).toBe('OUT_OF_SCOPE');
+    expect(offTopic.sanitizedResponse).toContain('Automotriz Demo');
+
+    const inScope = guardrails.checkScope('Busco una camioneta automática', 'Automotriz Demo', 'automotive');
+    expect(inScope.passed).toBe(true);
+    expect(guardrails.checkScope('Quiero el programa de financiamiento', 'Automotriz Demo', 'automotive').passed).toBe(true);
   });
 });

@@ -75,6 +75,24 @@ export class AgentEngine {
     const pack = await getActiveBusinessPack();
     const registry = buildSalesToolRegistry(pack);
 
+    // 2.1 Guardrail de alcance: no responder temas ajenos al negocio
+    const scopeCheck = guardrails.checkScope(
+      incomingText,
+      pack?.profile.name ?? 'Chatbot WS',
+      pack?.profile.vertical
+    );
+    if (!scopeCheck.passed && scopeCheck.sanitizedResponse) {
+      return {
+        replyText: scopeCheck.sanitizedResponse,
+        catalogToolExecuted: false,
+        leadToolExecuted: false,
+        handoffToolExecuted: false,
+        promptTokens: 0,
+        completionTokens: 0,
+        totalLatencyMs: Date.now() - startEngineTime,
+      };
+    }
+
     // 3. Historial reciente y ensamblaje de contexto con el pack activo
     const historyMessages = await messageRepository.getSlidingContextWindow(conversation.id, 6);
     const preparedContext = await contextManager.prepareContext(

@@ -102,7 +102,10 @@ export function buildSalesToolRegistry(pack: BusinessPack | null): ToolRegistry 
     return registry;
   }
 
-  const catalog = new JsonCatalogProvider(pack.catalog);
+  const catalog = new JsonCatalogProvider(pack.catalog, {
+    synonyms: pack.search?.synonyms,
+    minScore: pack.search?.minScore,
+  });
 
   registry.register({
     name: 'search_inventory',

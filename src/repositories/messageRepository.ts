@@ -197,6 +197,26 @@ export class MessageRepository {
   }
 
   /**
+   * Uso acumulado de una conversación para cuotas anti-bucle.
+   * Incluye mensajes entrantes y salientes con sus tokens.
+   */
+  public async getConversationUsage(
+    conversationId: string
+  ): Promise<{ messages: number; tokens: number }> {
+    const query = `
+      SELECT COUNT(*) FILTER (WHERE direction = 'INBOUND')::int AS messages,
+             COALESCE(SUM(prompt_tokens + completion_tokens), 0)::bigint AS tokens
+      FROM public.messages
+      WHERE conversation_id = $1;
+    `;
+    const result = await db.query(query, [conversationId]);
+    const row = result.rows[0] as { messages?: number; tokens?: string | number } | undefined;
+    return {
+      messages: Number(row?.messages ?? 0),
+      tokens: Number(row?.tokens ?? 0),
+    };
+  }
+  /**
    * Busca un mensaje por su wamid.
    */
   public async findByWamid(wamid: string): Promise<MessageRecord | null> {
