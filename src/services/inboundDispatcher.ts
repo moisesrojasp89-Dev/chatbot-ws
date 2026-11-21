@@ -475,6 +475,7 @@ export class InboundDispatcher {
               deferSideEffects: true,
               deadlineMs: turnDeadlineMs,
               abortSignal: this.shutdownAbortController.signal,
+              channel: primaryEvent.channel,
             }),
           (err) => {
             const type = classifyLlmError(err);

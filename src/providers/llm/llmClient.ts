@@ -412,7 +412,8 @@ export class LlmClient {
     systemInstruction: string,
     contents: LlmContentMessage[],
     timeoutMs: number = this.defaultTimeoutMs,
-    parentSignal?: AbortSignal
+    parentSignal?: AbortSignal,
+    tools: LlmTool[] = OFFICIAL_TOOLS
   ): Promise<LlmCompletionResult> {
     const startTime = Date.now();
     const abortController = new AbortController();
@@ -446,7 +447,7 @@ export class LlmClient {
     const payload = {
       model: this.modelName,
       messages: this.buildMessages(systemInstruction, contents),
-      tools: OFFICIAL_TOOLS,
+      tools: tools.length > 0 ? tools : undefined,
       tool_choice: 'auto',
       temperature: 0.2,
       max_tokens: maxOutputTokens,

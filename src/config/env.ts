@@ -22,6 +22,11 @@ const envSchema = z.object({
     z.string().min(6).optional()
   ),
   CHANNELS_ENABLED: z.string().default('whatsapp'),
+  // Pack de negocio opcional (perfil + catálogo + prompt). Sin él se usa el default.
+  BUSINESS_PACK_PATH: z.preprocess(
+    (value) => (typeof value === 'string' && value.trim() === '' ? undefined : value),
+    z.string().optional()
+  ),
   TELEGRAM_BOT_TOKEN: z.preprocess(
     (value) => (typeof value === 'string' && value.trim() === '' ? undefined : value),
     z.string().min(10).optional()

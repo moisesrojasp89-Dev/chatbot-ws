@@ -4,9 +4,8 @@ import { llmClient } from '../providers/llm/llmClient.js';
 import { LlmContentMessage } from '../providers/llm/llmTypes.js';
 import { contextManager } from './contextManager.js';
 import { guardrails } from './guardrails.js';
-import { searchProductCatalog } from './tools/catalogTools.js';
-import { createQualifiedLead } from './tools/leadTools.js';
-import { requestHumanHandoff } from './tools/handoffTools.js';
+import { getActiveBusinessPack } from '../core/activePack.js';
+import { buildSalesToolRegistry } from './salesToolRegistry.js';
 import { logger } from '../utils/logger.js';
 
 import { CreateQualifiedLeadArgs } from './tools/leadTools.js';
@@ -16,6 +15,7 @@ export interface AgentProcessOptions {
   deferSideEffects?: boolean;
   deadlineMs?: number;
   abortSignal?: AbortSignal;
+  channel?: string;
 }
 
 export interface AgentProcessResult {
@@ -69,13 +69,19 @@ export class AgentEngine {
       };
     }
 
-    // 2. Obtención de historial reciente (I11: ventana deslizante óptima de 6 mensajes) y ensamblaje de contexto
+    // 2. Perfil/catálogo activos y registro de tools
+    const pack = await getActiveBusinessPack();
+    const registry = buildSalesToolRegistry(pack);
+
+    // 3. Historial reciente y ensamblaje de contexto con el pack activo
     const historyMessages = await messageRepository.getSlidingContextWindow(conversation.id, 6);
     const preparedContext = await contextManager.prepareContext(
       contact,
       conversation,
       historyMessages,
-      incomingText
+      incomingText,
+      pack,
+      options?.channel
     );
 
     // Mensajes activos para el turno conversacional
@@ -118,7 +124,8 @@ export class AgentEngine {
         preparedContext.systemInstruction,
         activeMessages,
         turnTimeout,
-        options?.abortSignal
+        options?.abortSignal,
+        registry.list()
       );
 
       totalPromptTokens += turnResult.promptTokens;
@@ -129,10 +136,21 @@ export class AgentEngine {
         for (const call of turnResult.functionCalls) {
           logger.info({ toolName: call.name, iteration }, '🛠️ Modelo solicitó ejecución de Tool');
 
-          if (call.name === 'searchProductCatalog') {
-            const toolOutput = searchProductCatalog(call.args as any);
-            catalogToolExecuted = true;
-
+          let definition;
+          let toolOutput: unknown;
+          let parsedInput: unknown;
+          try {
+            definition = registry.get(call.name);
+            parsedInput = definition.inputSchema.parse(call.args);
+            toolOutput = await registry.execute(call.name, parsedInput, {
+              contactId: contact.id,
+              conversationId: conversation.id,
+              channel: options?.channel,
+              deferSideEffects: options?.deferSideEffects,
+            });
+          } catch (toolError) {
+            const message = toolError instanceof Error ? toolError.message : 'Tool execution failed';
+            logger.warn({ toolName: call.name, message }, 'Tool inválida o fallida; se devuelve error al modelo');
             activeMessages.push({
               role: 'assistant',
               parts: [{ functionCall: call }],
@@ -142,67 +160,52 @@ export class AgentEngine {
               parts: [
                 {
                   functionResponse: {
-                    name: 'searchProductCatalog',
-                    response: { result: toolOutput },
+                    name: call.name,
+                    response: { error: message },
                   },
                 },
               ],
             });
-          } else if (call.name === 'createQualifiedLead') {
-            const leadArgs: CreateQualifiedLeadArgs = {
-              contactId: contact.id,
-              conversationId: conversation.id,
-              ...(call.args as any),
-            };
-            const toolOutput = await createQualifiedLead(leadArgs, { defer: options?.deferSideEffects });
+            continue;
+          }
+
+          if (definition.effect === 'catalog') {
+            catalogToolExecuted = true;
+          } else if (definition.effect === 'lead') {
             leadToolExecuted = true;
             if (options?.deferSideEffects) {
-              pendingLead = leadArgs;
+              pendingLead = {
+                ...(parsedInput as Omit<CreateQualifiedLeadArgs, 'contactId' | 'conversationId'>),
+                contactId: contact.id,
+                conversationId: conversation.id,
+              };
             }
-
-            activeMessages.push({
-              role: 'assistant',
-              parts: [{ functionCall: call }],
-            });
-            activeMessages.push({
-              role: 'user',
-              parts: [
-                {
-                  functionResponse: {
-                    name: 'createQualifiedLead',
-                    response: { result: toolOutput },
-                  },
-                },
-              ],
-            });
-          } else if (call.name === 'requestHumanHandoff') {
-            const handoffArgs: RequestHumanHandoffArgs = {
-              contactId: contact.id,
-              conversationId: conversation.id,
-              ...(call.args as any),
-            };
-            const toolOutput = await requestHumanHandoff(handoffArgs, { defer: options?.deferSideEffects });
+          } else if (definition.effect === 'handoff') {
             handoffToolExecuted = true;
             if (options?.deferSideEffects) {
-              pendingHandoff = handoffArgs;
+              pendingHandoff = {
+                ...(parsedInput as Omit<RequestHumanHandoffArgs, 'contactId' | 'conversationId'>),
+                contactId: contact.id,
+                conversationId: conversation.id,
+              };
             }
-
-            activeMessages.push({
-              role: 'assistant',
-              parts: [{ functionCall: call }],
-            });
-            activeMessages.push({
-              role: 'user',
-              parts: [
-                {
-                  functionResponse: {
-                    name: 'requestHumanHandoff',
-                    response: { result: toolOutput },
-                  },
-                },
-              ],
-            });
           }
+
+          activeMessages.push({
+            role: 'assistant',
+            parts: [{ functionCall: call }],
+          });
+          activeMessages.push({
+            role: 'user',
+            parts: [
+              {
+                functionResponse: {
+                  name: call.name,
+                  response: { result: toolOutput },
+                },
+              },
+            ],
+          });
         }
         // Continuar el bucle para que el modelo redacte el texto final fundamentado
         continue;

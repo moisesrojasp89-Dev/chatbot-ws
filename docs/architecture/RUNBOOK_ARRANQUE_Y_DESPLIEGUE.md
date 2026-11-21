@@ -31,6 +31,7 @@ Copia `.env.example` a `.env` y completa:
 | `LLM_BASE_URL` | `https://api.openai.com/v1` | Endpoint compatible con Chat Completions |
 | `LLM_MODEL` | `gpt-4o-mini` | Modelo con soporte de function calling |
 | `CHANNELS_ENABLED` | `whatsapp` o `whatsapp,telegram` | Canales activos; cada uno exige su configuración |
+| `BUSINESS_PACK_PATH` | `packs/automotive/pack.json` | Opcional: perfil/catálogo/prompt del negocio |
 | `BACKLOG_ALERT_THRESHOLD` | `100` | Desde este umbral el log `CHANNEL_BACKLOG` pasa de `warn` a `error` |
 | `MEDIA_STORAGE_ENABLED` | `true` | Descarga/almacena media en el dispatcher |
 | `MEDIA_STORAGE_DIR` | `./media` | Directorio local; debe estar fuera de git |

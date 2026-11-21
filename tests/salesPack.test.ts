@@ -4,6 +4,8 @@ import { afterEach, describe, expect, it } from 'vitest';
 import { z } from 'zod';
 import { JsonCatalogProvider } from '../src/core/catalogProvider.js';
 import { loadBusinessPack } from '../src/core/businessProfile.js';
+import { buildSalesToolRegistry } from '../src/harness/salesToolRegistry.js';
+import { contextManager } from '../src/harness/contextManager.js';
 import {
   ToolInputError,
   ToolNotFoundError,
@@ -115,5 +117,36 @@ describe('Sales Pack base', () => {
 
     await expect(loadBusinessPack(malformedPath)).rejects.toThrow(/JSON válido/);
     await expect(loadBusinessPack('../outside-pack.json')).rejects.toThrow(/directorio permitido/);
+  });
+  it('construye el registry del pack y ejecuta search_inventory', async () => {
+    const pack = await loadBusinessPack(packPath);
+    const registry = buildSalesToolRegistry(pack);
+    const names = registry.list().map((tool) => tool.function.name);
+
+    expect(names).toEqual(
+      expect.arrayContaining(['search_inventory', 'get_catalog_item', 'capture_lead', 'handoff_to_advisor'])
+    );
+
+    const result = (await registry.execute('search_inventory', { text: 'RAV4' })) as {
+      total: number;
+      items: Array<{ id: string }>;
+    };
+    expect(result.total).toBe(1);
+    expect(result.items[0].id).toBe('suv-001');
+  });
+
+  it('inyecta perfil, reglas y canal en el system prompt del pack', async () => {
+    const pack = await loadBusinessPack(packPath);
+    const prompt = contextManager.buildSystemInstruction(
+      { profile_name: 'Ana' } as never,
+      { current_state: 'IDLE', context_summary: '' } as never,
+      pack,
+      'telegram'
+    );
+
+    expect(prompt).toContain('Automotriz Demo');
+    expect(prompt).toContain('automotive');
+    expect(prompt).toContain('No inventar precio');
+    expect(prompt).toContain('<channel>telegram</channel>');
   });
 });

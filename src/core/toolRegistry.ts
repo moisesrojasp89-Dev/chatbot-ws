@@ -1,11 +1,15 @@
 import { z } from 'zod';
 import { LlmTool } from '../providers/llm/llmTypes.js';
 
+export type ToolEffect = 'catalog' | 'lead' | 'handoff';
+
 export interface ToolDefinition<TInput = unknown> {
   name: string;
   description: string;
   parameters: LlmTool['function']['parameters'];
   inputSchema: z.ZodType<TInput>;
+  /** Efecto de negocio que el motor debe reflejar (flag/diferido). */
+  effect?: ToolEffect;
   execute: (input: TInput, context: ToolContext) => Promise<unknown> | unknown;
 }
 

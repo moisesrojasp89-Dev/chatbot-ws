@@ -12,6 +12,8 @@ import { auditRepository } from '../src/repositories/auditRepository.js';
 import { db } from '../src/providers/database/dbClient.js';
 import { ContactRecord, ConversationRecord } from '../src/types/states.js';
 import { whatsappClient } from '../src/providers/channels/meta/whatsappClient.js';
+import { env } from '../src/config/env.js';
+import { resetActiveBusinessPack } from '../src/core/activePack.js';
 
 describe('Fase 3 — Motor Agéntico (ReAct Loop & Tools)', () => {
   const mockContact: ContactRecord = {
@@ -168,6 +170,48 @@ describe('Fase 3 — Motor Agéntico (ReAct Loop & Tools)', () => {
 
       expect(result.success).toBe(true);
       expect(result.handoffId).toBe('handoff-other-chat');
+    });
+    it('anuncia al LLM las tools del pack y usa search_inventory', async () => {
+      const previousPack = env.BUSINESS_PACK_PATH;
+      env.BUSINESS_PACK_PATH = 'packs/automotive/pack.json';
+      resetActiveBusinessPack();
+      vi.spyOn(messageRepository, 'getSlidingContextWindow').mockResolvedValueOnce([]);
+
+      const spyLlm = vi
+        .spyOn(llmClient, 'generateTurn')
+        .mockResolvedValueOnce({
+          text: '',
+          functionCalls: [{ name: 'search_inventory', args: { text: 'RAV4' } }],
+          promptTokens: 100,
+          completionTokens: 20,
+          latencyMs: 100,
+        })
+        .mockResolvedValueOnce({
+          text: 'La Toyota RAV4 2023 está disponible en Caracas.',
+          functionCalls: undefined,
+          promptTokens: 150,
+          completionTokens: 30,
+          latencyMs: 100,
+        });
+
+      try {
+        const result = await agentEngine.processMessage(
+          mockContact,
+          mockConversation,
+          'Busco una RAV4',
+          { channel: 'telegram' }
+        );
+
+        const tools = spyLlm.mock.calls[0][4] as Array<{ function: { name: string } }>;
+        expect(tools.map((tool) => tool.function.name)).toEqual(
+          expect.arrayContaining(['search_inventory', 'get_catalog_item', 'capture_lead', 'handoff_to_advisor'])
+        );
+        expect(result.catalogToolExecuted).toBe(true);
+        expect(result.replyText).toContain('RAV4');
+      } finally {
+        env.BUSINESS_PACK_PATH = previousPack;
+        resetActiveBusinessPack();
+      }
     });
   });
 
