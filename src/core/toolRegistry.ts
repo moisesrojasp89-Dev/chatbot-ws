@@ -10,6 +10,8 @@ export interface ToolDefinition<TInput = unknown> {
   inputSchema: z.ZodType<TInput>;
   /** Efecto de negocio que el motor debe reflejar (flag/diferido). */
   effect?: ToolEffect;
+  /** Mapea input a args de lead cuando effect='lead'. */
+  leadArgs?: (input: TInput) => Record<string, unknown>;
   execute: (input: TInput, context: ToolContext) => Promise<unknown> | unknown;
 }
 

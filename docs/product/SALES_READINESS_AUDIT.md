@@ -13,7 +13,7 @@ El **cerebro comercial** no lo está: hoy es una demo que vende los planes de Ch
 
 **Veredicto:** base técnica apta; producto comercial requiere un **Sales Pack configurable** antes de un piloto real.
 
-**Estado 4A.1/4A.2:** `BusinessProfile`, `CatalogProvider`, `ToolRegistry` y el pack automotriz están cableados al motor (`BUSINESS_PACK_PATH`). Falta completar todas las tools del pack, evaluación y piloto.
+**Estado 4A.1/4A.2:** `BusinessProfile`, `CatalogProvider`, `ToolRegistry` y el pack automotriz están cableados al motor (`BUSINESS_PACK_PATH`). Las 6 tools del pack están implementadas; falta evaluación, media saliente y piloto.
 
 ---
 

@@ -18,7 +18,7 @@ La base de datos de desarrollo, pruebas y certificación es un **proyecto Supaba
 ┌────────────────────────────────────────────────────────────────────────┐
 │  BASE DE DATOS DE PRUEBAS (Staging / Dev - proyecto Supabase dedicado) │
 │  • Es nuestro "laboratorio" de ingeniería.                             │
-│  • Aquí corren los 218 tests automatizados.                            │
+│  • Aquí corren los 219 tests automatizados.                            │
 │  • Aquí probamos migraciones SQL antes de aplicarlas a clientes.       │
 │  • Contiene datos de prueba y mocks de Meta.                           │
 │  ⚠️ NUNCA se mezcla con clientes reales ni con ventas comerciales.     │

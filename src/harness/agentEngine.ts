@@ -174,8 +174,10 @@ export class AgentEngine {
           } else if (definition.effect === 'lead') {
             leadToolExecuted = true;
             if (options?.deferSideEffects) {
+              const leadFields = definition.leadArgs?.(parsedInput) ?? {};
               pendingLead = {
                 ...(parsedInput as Omit<CreateQualifiedLeadArgs, 'contactId' | 'conversationId'>),
+                ...leadFields,
                 contactId: contact.id,
                 conversationId: conversation.id,
               };

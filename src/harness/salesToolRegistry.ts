@@ -142,6 +142,126 @@ export function buildSalesToolRegistry(pack: BusinessPack | null): ToolRegistry 
   });
 
   registry.register({
+    name: 'quote_vehicle',
+    description: 'Cotiza un vehículo del catálogo sin aprobar crédito.',
+    effect: 'catalog',
+    parameters: {
+      type: 'object',
+      properties: {
+        vehicleId: { type: 'string' },
+        paymentMethod: { type: 'string', enum: ['cash', 'finance'] },
+      },
+      required: ['vehicleId'],
+    },
+    inputSchema: z.object({
+      vehicleId: z.string().min(1),
+      paymentMethod: z.enum(['cash', 'finance']).default('cash'),
+    }),
+    execute: (input) => {
+      const vehicle = catalog.get(input.vehicleId);
+      if (!vehicle) throw new Error('Vehículo no encontrado en el catálogo');
+      return {
+        vehicleId: vehicle.id,
+        name: vehicle.name,
+        price: vehicle.price,
+        currency: vehicle.currency,
+        paymentMethod: input.paymentMethod,
+        available: vehicle.stock,
+        priceIncludesTax: pack.profile.policies.priceIncludesTax === true,
+        note:
+          input.paymentMethod === 'finance'
+            ? 'Cotización informativa; no representa aprobación de crédito.'
+            : 'Precio sujeto a disponibilidad y confirmación del asesor.',
+      };
+    },
+  });
+
+  registry.register({
+    name: 'schedule_test_drive',
+    description: 'Solicita una cita de test drive; requiere confirmación humana.',
+    effect: 'lead',
+    parameters: {
+      type: 'object',
+      properties: {
+        vehicleId: { type: 'string' },
+        preferredDate: { type: 'string' },
+        preferredTime: { type: 'string' },
+        location: { type: 'string' },
+        hasLicense: { type: 'boolean' },
+      },
+      required: ['preferredDate', 'preferredTime', 'location', 'hasLicense'],
+    },
+    inputSchema: z.object({
+      vehicleId: z.string().optional(),
+      preferredDate: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
+      preferredTime: z.string().regex(/^\d{2}:\d{2}$/),
+      location: z.string().min(1),
+      hasLicense: z.boolean(),
+    }),
+    leadArgs: (input) => ({
+      productInterest: `Solicitud de test drive${input.vehicleId ? `: ${input.vehicleId}` : ''}`,
+      customerCity: input.location,
+      notes: `Test drive ${input.preferredDate} ${input.preferredTime}; licencia=${input.hasLicense}`,
+    }),
+    execute: (input, context) => {
+      if (!input.hasLicense) {
+        throw new Error('El test drive requiere licencia de conducir vigente');
+      }
+      if (input.vehicleId && !catalog.get(input.vehicleId)) {
+        throw new Error('Vehículo no encontrado en el catálogo');
+      }
+      return createQualifiedLead(
+        {
+          contactId: context.contactId ?? '',
+          conversationId: context.conversationId ?? '',
+          productInterest: `Solicitud de test drive${input.vehicleId ? `: ${input.vehicleId}` : ''}`,
+          customerCity: input.location,
+          notes: `Test drive ${input.preferredDate} ${input.preferredTime}; licencia=${input.hasLicense}`,
+        },
+        { defer: context.deferSideEffects }
+      );
+    },
+  });
+
+  registry.register({
+    name: 'capture_trade_in',
+    description: 'Registra un vehículo de permuta sujeto a inspección.',
+    effect: 'lead',
+    parameters: {
+      type: 'object',
+      properties: {
+        make: { type: 'string' },
+        model: { type: 'string' },
+        year: { type: 'number' },
+        mileageKm: { type: 'number' },
+        conditionNotes: { type: 'string' },
+      },
+      required: ['make', 'model', 'year', 'mileageKm'],
+    },
+    inputSchema: z.object({
+      make: z.string().min(1),
+      model: z.string().min(1),
+      year: z.number().int().min(1950).max(2100),
+      mileageKm: z.number().int().nonnegative(),
+      conditionNotes: z.string().optional(),
+    }),
+    leadArgs: (input) => ({
+      productInterest: `Permuta: ${input.make} ${input.model} ${input.year}`,
+      notes: `Kilometraje: ${input.mileageKm}. ${input.conditionNotes ?? ''}`.trim(),
+    }),
+    execute: (input, context) =>
+      createQualifiedLead(
+        {
+          contactId: context.contactId ?? '',
+          conversationId: context.conversationId ?? '',
+          productInterest: `Permuta: ${input.make} ${input.model} ${input.year}`,
+          notes: `Kilometraje: ${input.mileageKm}. ${input.conditionNotes ?? ''}`.trim(),
+        },
+        { defer: context.deferSideEffects }
+      ),
+  });
+
+  registry.register({
     name: 'capture_lead',
     description: 'Registra los datos de contacto y calificación del cliente.',
     effect: 'lead',

@@ -124,7 +124,15 @@ describe('Sales Pack base', () => {
     const names = registry.list().map((tool) => tool.function.name);
 
     expect(names).toEqual(
-      expect.arrayContaining(['search_inventory', 'get_catalog_item', 'capture_lead', 'handoff_to_advisor'])
+      expect.arrayContaining([
+        'search_inventory',
+        'get_catalog_item',
+        'quote_vehicle',
+        'schedule_test_drive',
+        'capture_trade_in',
+        'capture_lead',
+        'handoff_to_advisor',
+      ])
     );
 
     const result = (await registry.execute('search_inventory', { text: 'RAV4' })) as {
@@ -148,5 +156,46 @@ describe('Sales Pack base', () => {
     expect(prompt).toContain('automotive');
     expect(prompt).toContain('No inventar precio');
     expect(prompt).toContain('<channel>telegram</channel>');
+  });
+  it('cotiza, agenda test drive y captura permuta con lead diferido', async () => {
+    const pack = await loadBusinessPack(packPath);
+    const registry = buildSalesToolRegistry(pack);
+
+    const quote = (await registry.execute('quote_vehicle', {
+      vehicleId: 'suv-001',
+      paymentMethod: 'finance',
+    })) as { price: number; paymentMethod: string; note: string };
+    expect(quote.price).toBe(28500);
+    expect(quote.paymentMethod).toBe('finance');
+    expect(quote.note).toContain('no representa aprobación');
+
+    const testDrive = await registry.execute(
+      'schedule_test_drive',
+      {
+        vehicleId: 'suv-001',
+        preferredDate: '2026-12-01',
+        preferredTime: '10:30',
+        location: 'Caracas',
+        hasLicense: true,
+      },
+      { contactId: 'c1', conversationId: 'conv1', deferSideEffects: true }
+    );
+    expect(testDrive).toMatchObject({ success: true, leadId: 'staged-lead' });
+
+    await expect(
+      registry.execute('schedule_test_drive', {
+        preferredDate: '2026-12-01',
+        preferredTime: '10:30',
+        location: 'Caracas',
+        hasLicense: false,
+      })
+    ).rejects.toThrow(/licencia/);
+
+    const tradeIn = await registry.execute(
+      'capture_trade_in',
+      { make: 'Honda', model: 'CR-V', year: 2019, mileageKm: 80000 },
+      { contactId: 'c1', conversationId: 'conv1', deferSideEffects: true }
+    );
+    expect(tradeIn).toMatchObject({ success: true, leadId: 'staged-lead' });
   });
 });
