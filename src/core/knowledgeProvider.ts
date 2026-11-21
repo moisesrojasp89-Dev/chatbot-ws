@@ -72,6 +72,10 @@ export class JsonKnowledgeProvider {
     }
   }
 
+  public all(): KnowledgeDocument[] {
+    return [...this.documents];
+  }
+
   public search(query: string, limit = 3): KnowledgeSearchResult {
     const rawText = normalize(query);
     if (!rawText || this.documents.length === 0) {

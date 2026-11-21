@@ -31,7 +31,10 @@
 | 55923ea | **Ola 4A.3:** guardrails de ventas (precio/crédito/disponibilidad/test drive/descuento) y 10 escenarios adversariales. | 222 tests | PASS con reservas; residuales corregidos |
 | 621c6a1 | **Ola 4A.3b:** endurecer negaciones, test drive por tool, bolívares y formatos mixtos. | 225 tests | PASS con reservas; residuales corregidos |
 | 1948f0a | **Ola 4A.4:** catálogo semántico (sinónimos/fuzzy), guardrail de alcance y cuota por conversación. | 232 tests | PASS con reservas; residuales corregidos |
-| 77e9920 | **Ola 4A.4b:** subir techo a 100k y contar tokens del outbox pendiente con máximo, no solo historial. | 232 tests | PASS |`n| 05e35b7 | **Ola 4A.5:** reescritura acotada de guardrails y RAG léxico por pack (`search_knowledge`). | 236 tests | PASS con reservas; residuales corregidos |`n| b44bafc | **Ola 4A.5b:** cerrar fail-open, incluir respuesta bloqueada en rewrite y filtrar RAG bajo umbral. | 236 tests | PASS con reservas; residuales corregidos |
+| 77e9920 | **Ola 4A.4b:** subir techo a 100k y contar tokens del outbox pendiente con máximo, no solo historial. | 232 tests | PASS |
+| 05e35b7 | **Ola 4A.5:** reescritura acotada de guardrails y RAG léxico por pack (`search_knowledge`). | 236 tests | PASS con reservas; residuales corregidos |
+| b44bafc | **Ola 4A.5b:** cerrar fail-open, incluir respuesta bloqueada en rewrite y filtrar RAG bajo umbral. | 236 tests | PASS con reservas; residuales corregidos |
+| pendiente | **Ola 4A.6:** RAG vectorial opcional (embeddings OpenAI-compatible) con fallback léxico. | 238 tests | Pendiente de cierre |
 
 ### Decisiones registradas
 

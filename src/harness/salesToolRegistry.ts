@@ -1,7 +1,8 @@
 import { z } from 'zod';
 import { BusinessPack } from '../core/types.js';
 import { JsonCatalogProvider } from '../core/catalogProvider.js';
-import { JsonKnowledgeProvider } from '../core/knowledgeProvider.js';
+import { HybridKnowledgeProvider } from '../core/hybridKnowledgeProvider.js';
+import { embeddingClient } from '../providers/embeddings/embeddingClient.js';
 import { ToolRegistry } from '../core/toolRegistry.js';
 import { searchProductCatalog } from './tools/catalogTools.js';
 import { createQualifiedLead } from './tools/leadTools.js';
@@ -26,6 +27,24 @@ const handoffInput = z.object({
  * Construye el registry por defecto o el del pack activo.
  * Las tools reales del pack automotriz se agregan en 4A.2.
  */
+const knowledgeCache = new Map<string, HybridKnowledgeProvider>();
+
+function getKnowledgeProvider(pack: BusinessPack): HybridKnowledgeProvider {
+  const key = `${pack.profile.id}:${pack.knowledge.map((document) => document.id).join(',')}`;
+  const cached = knowledgeCache.get(key);
+  if (cached) return cached;
+
+  const provider = new HybridKnowledgeProvider(
+    pack.knowledge,
+    {
+      synonyms: pack.search?.synonyms,
+      minScore: pack.search?.minScore,
+    },
+    embeddingClient.isConfigured() ? embeddingClient : null
+  );
+  knowledgeCache.set(key, provider);
+  return provider;
+}
 export function buildSalesToolRegistry(pack: BusinessPack | null): ToolRegistry {
   const registry = new ToolRegistry();
 
@@ -107,10 +126,7 @@ export function buildSalesToolRegistry(pack: BusinessPack | null): ToolRegistry 
     synonyms: pack.search?.synonyms,
     minScore: pack.search?.minScore,
   });
-  const knowledge = new JsonKnowledgeProvider(pack.knowledge, {
-    synonyms: pack.search?.synonyms,
-    minScore: pack.search?.minScore,
-  });
+  const knowledge = getKnowledgeProvider(pack);
 
   registry.register({
     name: 'search_inventory',
@@ -284,7 +300,7 @@ export function buildSalesToolRegistry(pack: BusinessPack | null): ToolRegistry 
       query: z.string().min(1),
       limit: z.number().int().min(1).max(5).optional(),
     }),
-    execute: (input) => knowledge.search(input.query, input.limit),
+    execute: async (input) => knowledge.search(input.query, input.limit),
   });
   registry.register({
     name: 'capture_lead',

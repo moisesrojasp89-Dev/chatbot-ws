@@ -79,7 +79,7 @@ Es una red determinista; el prompt también incluye la regla 11 de alcance. No p
 - la tool `search_knowledge` recupera por tokens/sinónimos y devuelve `found/confidence/documents`;
 - el prompt exige citar la fuente y, si no hay documento, ofrecer un asesor.
 
-Es RAG léxico, no embeddings. La ventaja: determinista, barato y auditable; la limitación: no entiende paráfrasis profundas.
+Si `EMBEDDINGS_BASE_URL` y `EMBEDDINGS_MODEL` están configurados, un **híbrido léxico + vectorial** rerankea los documentos; si no, se usa el RAG léxico. El vectorial es opcional y nunca sustituye la verificación determinista.
 
 ## 5. Cuota por conversación
 
@@ -104,5 +104,5 @@ Si la consulta de cuota falla, se permite el turno y se registra el error: la pr
 - La semántica es léxica (sinónimos + fuzzy), no comprensión profunda.
 - La cuota es por conversación, no por usuario/canal global. 100k es un techo de costo, no una promesa de conversación infinita.
 - El guardrail de alcance puede tener falsos positivos; se ajusta por pack.
-- No hay aún RAG de documentos ni verificación semántica de cada afirmación.
+- El RAG vectorial es opcional y en memoria; para catálogos/documentos grandes falta pgvector o un índice externo.
 - Falta un eval con paráfrasis reales y conversaciones del piloto.

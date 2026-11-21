@@ -23,6 +23,19 @@ const envSchema = z.object({
   ),
   CHANNELS_ENABLED: z.string().default('whatsapp'),
   // Pack de negocio opcional (perfil + catálogo + prompt). Sin él se usa el default.
+  // Embeddings opcionales (OpenAI-compatible). Sin configurar, RAG léxico.
+  EMBEDDINGS_BASE_URL: z.preprocess(
+    (value) => (typeof value === 'string' && value.trim() === '' ? undefined : value),
+    z.string().url().optional()
+  ),
+  EMBEDDINGS_MODEL: z.preprocess(
+    (value) => (typeof value === 'string' && value.trim() === '' ? undefined : value),
+    z.string().optional()
+  ),
+  EMBEDDINGS_API_KEY: z.preprocess(
+    (value) => (typeof value === 'string' && value.trim() === '' ? undefined : value),
+    z.string().optional()
+  ),
   BUSINESS_PACK_PATH: z.preprocess(
     (value) => (typeof value === 'string' && value.trim() === '' ? undefined : value),
     z.string().optional()
