@@ -1,0 +1,93 @@
+{
+  "profile": {
+    "id": "automotive-demo",
+    "name": "Automotriz Demo",
+    "vertical": "automotive",
+    "language": "es",
+    "timezone": "America/Caracas",
+    "tone": "cálido, directo y profesional; sin presión de venta",
+    "hours": {
+      "mon-fri": "08:00-18:00",
+      "sat": "08:00-13:00"
+    },
+    "locations": ["Caracas", "Valencia"],
+    "policies": {
+      "priceCurrency": "USD",
+      "priceIncludesTax": false,
+      "testDriveRequiresLicense": true,
+      "tradeInRequiresInspection": true
+    }
+  },
+  "catalog": [
+    {
+      "id": "suv-001",
+      "name": "Toyota RAV4 2023",
+      "category": "suv",
+      "price": 28500,
+      "currency": "USD",
+      "stock": true,
+      "description": "SUV automática, única dueña, mantenimiento al día.",
+      "attributes": {
+        "make": "Toyota",
+        "model": "RAV4",
+        "year": 2023,
+        "condition": "used",
+        "transmission": "automatic",
+        "fuel": "gasoline",
+        "mileageKm": 24000,
+        "location": "Caracas"
+      },
+      "images": ["https://example.com/vehicles/suv-001.jpg"]
+    },
+    {
+      "id": "sedan-001",
+      "name": "Honda Civic 2024",
+      "category": "sedan",
+      "price": 24900,
+      "currency": "USD",
+      "stock": true,
+      "description": "Sedán nuevo, automático, garantía de fábrica.",
+      "attributes": {
+        "make": "Honda",
+        "model": "Civic",
+        "year": 2024,
+        "condition": "new",
+        "transmission": "automatic",
+        "fuel": "gasoline",
+        "mileageKm": 0,
+        "location": "Valencia"
+      },
+      "images": ["https://example.com/vehicles/sedan-001.jpg"]
+    },
+    {
+      "id": "pickup-001",
+      "name": "Ford Ranger 2022",
+      "category": "pickup",
+      "price": 31500,
+      "currency": "USD",
+      "stock": false,
+      "description": "Pickup 4x4 diésel, disponible para preventa.",
+      "attributes": {
+        "make": "Ford",
+        "model": "Ranger",
+        "year": 2022,
+        "condition": "used",
+        "transmission": "automatic",
+        "fuel": "diesel",
+        "mileageKm": 41000,
+        "location": "Caracas"
+      },
+      "images": ["https://example.com/vehicles/pickup-001.jpg"]
+    }
+  ],
+  "prompt": {
+    "persona": "Asesor de ventas de Automotriz Demo",
+    "rules": [
+      "No inventar precio, stock, año ni kilometraje.",
+      "Confirmar ciudad y forma de pago antes de cotizar.",
+      "No prometer aprobación de crédito.",
+      "Ofrecer test drive solo si el cliente tiene licencia.",
+      "Derivar a un asesor ante financiamiento complejo o queja."
+    ]
+  }
+}

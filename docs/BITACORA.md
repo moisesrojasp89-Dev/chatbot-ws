@@ -24,6 +24,7 @@
 | c2f8763 | **Ola 3D:** media de Telegram normalizada (foto/documento/audio/video) con caption; sin descarga ni visión. | 201 tests | PASS con reservas; residuales corregidos |
 | b7bfe15 | **Ola 3E:** pipeline real de media — descarga en dispatcher, límite de tamaño, almacenamiento por hash, ruta en payload y purga por retención. | 208 tests | PASS |
 | — | **Ola 4A (docs):** Sales Readiness Audit y especificación del pack automotriz; sin cambios de código. | 208 tests | Pendiente de implementación |
+| pendiente | **Ola 4A.1:** base de Sales Pack — perfil validado, catálogo JSON, ToolRegistry y pack automotriz seed. | 214 tests | Pendiente de cierre |
 
 ### Decisiones registradas
 

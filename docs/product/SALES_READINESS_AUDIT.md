@@ -13,6 +13,8 @@ El **cerebro comercial** no lo está: hoy es una demo que vende los planes de Ch
 
 **Veredicto:** base técnica apta; producto comercial requiere un **Sales Pack configurable** antes de un piloto real.
 
+**Estado 4A.1:** ya existen `BusinessProfile`, `CatalogProvider`, `ToolRegistry` y un pack automotriz de ejemplo (`packs/automotive/pack.json`). Falta cablearlos al motor/prompt y ejecutar el piloto.
+
 ---
 
 ## 2. Inventario actual
