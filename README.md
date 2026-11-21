@@ -68,7 +68,7 @@ El repositorio adopta el estándar institucional de modularización y arnés de 
 
 ```text
 Chatbot WS/
-├── AGENTS.md                    # Mandato institucional para Antigravity, Claude, Cursor y agentes IA
+├── AGENTS.md                    # Mandato institucional para Antigravity, Claude, Cursor y agentes IA`n├── ARCHITECTURE.md              # Reglas de capas y presupuesto de tamaño (ejecutadas por el gate)
 ├── docs/                        # Documentación técnica modularizada por dominio
 │   ├── INDEX.md                 # Mapa de navegación central y taxonomía documental
 │   ├── BITACORA.md              # Bitácora cronológica: cambios, decisiones, evidencia y deuda

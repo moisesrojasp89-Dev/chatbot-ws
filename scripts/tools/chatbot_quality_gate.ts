@@ -12,6 +12,7 @@
 import { spawn } from 'node:child_process';
 import fs from 'node:fs';
 import path from 'node:path';
+import { checkArchitectureBudget } from './checkArchitecture.js';
 
 interface QualityGateResult {
   step: string;
@@ -73,7 +74,7 @@ function runCommand(command: string, args: string[]): Promise<{ code: number; st
 // ---------------------------------------------------------------------------
 async function checkTypeScript(): Promise<void> {
   const start = Date.now();
-  console.log(`${COLORS.blue}▶ [1/4] Ejecutando Verificación de Tipos TypeScript (tsc --noEmit)...${COLORS.reset}`);
+  console.log(`${COLORS.blue}▶ [1/5] Ejecutando Verificación de Tipos TypeScript (tsc --noEmit)...${COLORS.reset}`);
 
   const { code, stdout, stderr } = await runCommand('npx', ['tsc', '--noEmit']);
   const duration = Date.now() - start;
@@ -98,7 +99,7 @@ async function checkTypeScript(): Promise<void> {
 // ---------------------------------------------------------------------------
 async function checkTests(): Promise<void> {
   const start = Date.now();
-  console.log(`${COLORS.blue}▶ [2/4] Ejecutando Suite de Pruebas Automatizadas (vitest run)...${COLORS.reset}`);
+  console.log(`${COLORS.blue}▶ [2/5] Ejecutando Suite de Pruebas Automatizadas (vitest run)...${COLORS.reset}`);
 
   const { code, stdout, stderr } = await runCommand('npx', ['vitest', 'run']);
   const duration = Date.now() - start;
@@ -126,7 +127,7 @@ async function checkTests(): Promise<void> {
 // ---------------------------------------------------------------------------
 async function checkSecrets(): Promise<void> {
   const start = Date.now();
-  console.log(`${COLORS.blue}▶ [3/4] Escaneo de Seguridad Zero-Trust (Búsqueda de Secretos en Código)...${COLORS.reset}`);
+  console.log(`${COLORS.blue}▶ [3/5] Escaneo de Seguridad Zero-Trust (Búsqueda de Secretos en Código)...${COLORS.reset}`);
 
   const forbiddenPatterns: { name: string; regex: RegExp; ignorePlaceholders?: RegExp }[] = [
     {
@@ -218,7 +219,7 @@ async function checkSecrets(): Promise<void> {
 // ---------------------------------------------------------------------------
 async function checkEnvironmentAndArchitecture(): Promise<void> {
   const start = Date.now();
-  console.log(`${COLORS.blue}▶ [4/4] Verificación de Variables de Entorno y Arquitectura Institucional...${COLORS.reset}`);
+  console.log(`${COLORS.blue}▶ [4/5] Verificación de Variables de Entorno y Arquitectura Institucional...${COLORS.reset}`);
 
   const issues: string[] = [];
 
@@ -287,6 +288,30 @@ async function checkEnvironmentAndArchitecture(): Promise<void> {
 }
 
 // ---------------------------------------------------------------------------
+// 5. Architecture Budget Check
+// ---------------------------------------------------------------------------
+async function checkArchitecture(): Promise<void> {
+  const start = Date.now();
+  console.log(`${COLORS.blue}▶ [5/5] Verificando presupuesto de arquitectura (monolitos)...${COLORS.reset}`);
+
+  const result = checkArchitectureBudget();
+  const duration = Date.now() - start;
+
+  if (result.passed) {
+    console.log(`  ${COLORS.green}✔ Ningún archivo supera su presupuesto.${COLORS.reset} ${COLORS.gray}(${duration}ms)${COLORS.reset}`);
+    RESULTS.push({ step: 'Architecture Budget', passed: true, durationMs: duration });
+  } else {
+    console.error(`  ${COLORS.red}✖ Violaciones de presupuesto:${COLORS.reset}`);
+    result.issues.forEach((issue) => console.error(`    - ${issue}`));
+    RESULTS.push({
+      step: 'Architecture Budget',
+      passed: false,
+      durationMs: duration,
+      details: result.issues.join('\n'),
+    });
+  }
+}
+// ---------------------------------------------------------------------------
 // Main Executor
 // ---------------------------------------------------------------------------
 async function main(): Promise<void> {
@@ -295,6 +320,7 @@ async function main(): Promise<void> {
   await checkTypeScript();
   await checkSecrets();
   await checkEnvironmentAndArchitecture();
+  await checkArchitecture();
   await checkTests();
 
   console.log(`\n${COLORS.cyan}----------------------------------------------------------------${COLORS.reset}`);

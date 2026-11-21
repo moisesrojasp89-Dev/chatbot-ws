@@ -138,6 +138,8 @@ Todo canal nuevo (Telegram, Instagram, TikTok, webchat, etc.) **DEBE** implement
 
 ## ⚡ 6. Quality Gate Obligatorio
 
+Antes de commit, consulta [`ARCHITECTURE.md`](ARCHITECTURE.md): define capas, presupuesto de 400 líneas para archivos nuevos y la ratchet `architecture-baseline.json`. El Quality Gate incluye el chequeo mecánico `checkArchitecture.ts`.
+
 Antes de dar por concluida cualquier tarea o proponer un commit:
 
 ```bash

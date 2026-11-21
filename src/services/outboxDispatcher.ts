@@ -10,27 +10,19 @@ import { getChannelCircuitBreaker, CircuitOpenError } from '../utils/circuitBrea
 import { typingCadence } from '../harness/typingCadence.js';
 import { CONSTANTS } from '../config/constants.js';
 import { env } from '../config/env.js';
-import { sendOnCallAlert } from './alertNotifier.js';
+import { OutboxBacklogMonitor, ChannelBacklogSnapshot } from './outboxBacklogMonitor.js';
 import { logger } from '../utils/logger.js';
 import { OutboxRecord } from '../types/states.js';
 
 export type DispatchResult = 'SENT' | 'RETRY' | 'DEFERRED' | 'LEASE_LOST' | 'FAILED';
 
-export interface ChannelBacklogSnapshot {
-  channel: string;
-  pending: number;
-  paused: boolean;
-  enabled: boolean;
-  breakerState: string;
-  threshold: number;
-}
+export type { ChannelBacklogSnapshot } from './outboxBacklogMonitor.js';
 
 export class OutboxDispatcher {
   private pollTimer: NodeJS.Timeout | null = null;
   private reaperTimer: NodeJS.Timeout | null = null;
   private backlogTimer: NodeJS.Timeout | null = null;
-  private isCheckingBacklog: boolean = false;
-  private readonly lastBacklogAlerts = new Map<string, string>();
+  private readonly backlogMonitor = new OutboxBacklogMonitor();
   private isPolling: boolean = false; // F4-C3: Anti-overlapping guard
   private isRunning: boolean = false;
   private isStopping: boolean = false; // Auditor 5A: Bandera de apagado en curso
@@ -80,133 +72,17 @@ export class OutboxDispatcher {
 
   /** Snapshot del backlog PENDING por canal, con pausa y breaker. */
   public async getBacklogSnapshot(): Promise<ChannelBacklogSnapshot[]> {
-    const rows = await outboxRepository.countPendingByChannel();
-    const counts = new Map<string, number>();
-    for (const row of rows) {
-      const key = normalizeChannelName(row.channel);
-      counts.set(key, (counts.get(key) ?? 0) + row.pending);
-    }
-
-    const channels = new Set<string>([
-      ...channelRegistry.enabledChannels(),
-      ...counts.keys(),
-      ...this.lastBacklogAlerts.keys(),
-    ]);
-
-    return Array.from(channels).map((channel) => ({
-      channel,
-      pending: counts.get(channel) ?? 0,
-      paused: this.isChannelPaused(channel),
-      enabled: channelRegistry.isEnabled(channel),
-      breakerState: getChannelCircuitBreaker(channel).getState(),
-      threshold: env.BACKLOG_ALERT_THRESHOLD,
-    }));
+    return this.backlogMonitor.getSnapshot((channel) => this.isChannelPaused(channel));
   }
 
-  /**
-   * Emite alertas estructuradas para canales con backlog que no están sanos
-   * (deshabilitados, pausados o breaker no CLOSED). Deduplica por transición y
-   * emite un log de resolución al normalizarse.
-   */
+  /** Emite alertas deduplicadas de backlog; delega en el monitor extraído. */
   public async checkChannelBacklog(): Promise<ChannelBacklogSnapshot[]> {
-    if (this.isCheckingBacklog) return [];
-    this.isCheckingBacklog = true;
-
-    try {
-      const snapshot = await this.getBacklogSnapshot();
-
-      for (const item of snapshot) {
-        const needsAlert = !item.enabled || item.paused || item.breakerState !== 'CLOSED';
-
-        // Solo se resuelve cuando el backlog llega a cero; un canal sano con
-        // filas aún pendientes no debe enviar un "resuelto" prematuro.
-        if (item.pending === 0) {
-          if (this.lastBacklogAlerts.has(item.channel)) {
-            const delivered = await sendOnCallAlert({
-              alert: 'CHANNEL_BACKLOG_RESOLVED',
-              channel: item.channel,
-              pending: item.pending,
-              threshold: item.threshold,
-              enabled: item.enabled,
-              paused: item.paused,
-              breakerState: item.breakerState,
-            });
-
-            if (delivered) {
-              this.lastBacklogAlerts.delete(item.channel);
-              logger.info(
-                { alert: 'CHANNEL_BACKLOG_RESOLVED', channel: item.channel, pending: item.pending },
-                `✅ Backlog drenado en canal ${item.channel}`
-              );
-            } else {
-              logger.warn(
-                { alert: 'CHANNEL_BACKLOG_RESOLVED', channel: item.channel },
-                'No se pudo entregar la resolución al webhook de on-call; se reintentará'
-              );
-            }
-          }
-          continue;
-        }
-
-        if (!needsAlert) continue;
-
-        const level = item.pending >= item.threshold ? 'error' : 'warn';
-        const signature = `${level}:${item.enabled}:${item.paused}:${item.breakerState}`;
-        if (this.lastBacklogAlerts.get(item.channel) === signature) continue;
-
-        const alert = {
-          alert: 'CHANNEL_BACKLOG' as const,
-          channel: item.channel,
-          pending: item.pending,
-          threshold: item.threshold,
-          paused: item.paused,
-          enabled: item.enabled,
-          breakerState: item.breakerState,
-        };
-        const message = `⚠️ Backlog retenido en canal ${item.channel}: ${item.pending} PENDING (habilitado=${item.enabled}, pausado=${item.paused}, breaker=${item.breakerState})`;
-
-        if (level === 'error') {
-          logger.error(alert, message);
-        } else {
-          logger.warn(alert, message);
-        }
-
-        const delivered = await sendOnCallAlert({
-          alert: 'CHANNEL_BACKLOG',
-          channel: item.channel,
-          pending: item.pending,
-          threshold: item.threshold,
-          enabled: item.enabled,
-          paused: item.paused,
-          breakerState: item.breakerState,
-        });
-
-        if (delivered) {
-          this.lastBacklogAlerts.set(item.channel, signature);
-        } else {
-          logger.warn(
-            { alert: 'CHANNEL_BACKLOG', channel: item.channel },
-            'No se pudo entregar la alerta al webhook de on-call; se reintentará'
-          );
-        }
-      }
-
-      // Poda de canales que ya no aparecen en el snapshot.
-      const activeChannels = new Set(snapshot.map((item) => item.channel));
-      for (const channel of this.lastBacklogAlerts.keys()) {
-        if (!activeChannels.has(channel)) this.lastBacklogAlerts.delete(channel);
-      }
-
-      return snapshot;
-    } finally {
-      this.isCheckingBacklog = false;
-    }
+    return this.backlogMonitor.check((channel) => this.isChannelPaused(channel));
   }
-
   public resume(): void {
     this.pausedUntil = 0;
     this.pausedUntilByChannel.clear();
-    this.lastBacklogAlerts.clear();
+    this.backlogMonitor.reset();
     this.isStopping = false;
     this.isPolling = false;
     this.inFlight = null;
@@ -225,7 +101,7 @@ export class OutboxDispatcher {
 
     this.isRunning = true;
     this.isStopping = false;
-    this.lastBacklogAlerts.clear();
+    this.backlogMonitor.reset();
     logger.info(
       { intervalMs: CONSTANTS.OUTBOX.POLL_INTERVAL_MS, batchSize: CONSTANTS.OUTBOX.BATCH_SIZE },
       '🚀 Outbox Dispatcher Daemon iniciado'

@@ -35,7 +35,7 @@
 | 05e35b7 | **Ola 4A.5:** reescritura acotada de guardrails y RAG léxico por pack (`search_knowledge`). | 236 tests | PASS con reservas; residuales corregidos |
 | b44bafc | **Ola 4A.5b:** cerrar fail-open, incluir respuesta bloqueada en rewrite y filtrar RAG bajo umbral. | 236 tests | PASS con reservas; residuales corregidos |
 | 1d1eb34 | **Ola 4A.6:** RAG vectorial opcional (embeddings OpenAI-compatible) con fallback léxico. | 238 tests | PASS con reservas |
-| d802db2 | **Ola 4A.7:** media saliente — tool de imagen, `pendingMedia`, outbox `media_url` y adaptadores Meta/Telegram. | 240 tests | PASS con reservas; pendiente revisión |
+| d802db2 | **Ola 4A.7:** media saliente — tool de imagen, `pendingMedia`, outbox `media_url` y adaptadores Meta/Telegram. | 240 tests | PASS con reservas; pendiente revisión |`n| pendiente | **Ola 4B:** reglas de arquitectura, checker de presupuesto y extracción de `OutboxBacklogMonitor`. | 240 tests | Pendiente de cierre |
 
 ### Decisiones registradas
 

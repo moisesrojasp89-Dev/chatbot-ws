@@ -1,0 +1,9 @@
+{
+  "$comment": "Caps legacy de archivos >400 lineas. SOLO pueden bajar. Un archivo nuevo no puede entrar aqui.",
+  "caps": {
+    "src/services/inboundDispatcher.ts": 885,
+    "src/services/outboxDispatcher.ts": 626,
+    "src/repositories/inboundRepository.ts": 637,
+    "src/providers/llm/llmClient.ts": 562
+  }
+}
