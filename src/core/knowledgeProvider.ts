@@ -116,7 +116,10 @@ export class JsonKnowledgeProvider {
       found,
       confidence: Math.round(topScore * 100) / 100,
       documents: found
-        ? scored.slice(0, Math.min(Math.max(limit, 1), 5)).map(({ document }) => document)
+        ? scored
+            .filter(({ score }) => score >= this.minScore)
+            .slice(0, Math.min(Math.max(limit, 1), 5))
+            .map(({ document }) => document)
         : [],
     };
   }

@@ -256,20 +256,24 @@ export class AgentEngine {
       text: string
     ): { passed: boolean; reason?: string; safeResponse: string } => {
       const groundingCheck = guardrails.checkGroundingLock(text, catalogToolExecuted);
-      if (!groundingCheck.passed && groundingCheck.sanitizedResponse) {
+      if (!groundingCheck.passed) {
         return {
           passed: false,
           reason: groundingCheck.violationReason ?? 'UNGROUNDED_PRICE_MENTION',
-          safeResponse: groundingCheck.sanitizedResponse,
+          safeResponse:
+            groundingCheck.sanitizedResponse ??
+            'No puedo confirmar ese dato sin verificarlo. ¿Me das el modelo o producto exacto?',
         };
       }
 
       const denylistCheck = guardrails.checkPostInferenceDenylist(text);
-      if (!denylistCheck.passed && denylistCheck.sanitizedResponse) {
+      if (!denylistCheck.passed) {
         return {
           passed: false,
           reason: denylistCheck.violationReason ?? 'DENYLIST_CONTENT_DETECTED',
-          safeResponse: denylistCheck.sanitizedResponse,
+          safeResponse:
+            denylistCheck.sanitizedResponse ??
+            'No puedo ayudarte con ese contenido. ¿Te ayudo con productos, precios o una cita?',
         };
       }
 
@@ -280,11 +284,13 @@ export class AgentEngine {
         executedTools: Array.from(executedTools),
         allowedPrices,
       });
-      if (!salesCheck.passed && salesCheck.sanitizedResponse) {
+      if (!salesCheck.passed) {
         return {
           passed: false,
           reason: salesCheck.violationReason ?? 'SALES_POLICY_VIOLATION',
-          safeResponse: salesCheck.sanitizedResponse,
+          safeResponse:
+            salesCheck.sanitizedResponse ??
+            'Déjame verificar ese dato antes de confirmártelo. ¿Me das un poco más de contexto?',
         };
       }
 
@@ -296,16 +302,21 @@ export class AgentEngine {
     // 5. Reescritura acotada: una oportunidad para corregir sin perder el turno
     if (!evaluation.passed) {
       const remainingBudget = options?.deadlineMs
-        ? Math.max(1000, options.deadlineMs - Date.now())
+        ? options.deadlineMs - Date.now()
         : 20000;
+      const blockedResponse = finalBotText.replace(/<\//g, '<\\/');
       const rewriteInstruction = `${preparedContext.systemInstruction}
 <rewrite_instruction>
 Tu respuesta anterior fue bloqueada por la política "${evaluation.reason}".
-Reescribe la respuesta al cliente usando SOLO hechos de las tools/catálogo.
+Respuesta bloqueada: <blocked_response>${blockedResponse}</blocked_response>
+Reescribe esa respuesta usando SOLO hechos de las tools/catálogo o del conocimiento ya recuperado.
 Si falta información, haz UNA sola pregunta de aclaración o deriva a un asesor.
 No repitas la infracción. Mantén el idioma, el tono y la brevedad.
 </rewrite_instruction>`;
 
+      if (remainingBudget <= 0) {
+        finalBotText = evaluation.safeResponse;
+      } else {
       try {
         const rewrite = await llmClient.generateTurn(
           rewriteInstruction,
@@ -332,6 +343,7 @@ No repitas la infracción. Mantén el idioma, el tono y la brevedad.
           'Reescritura de guardrail falló; se usa respuesta segura'
         );
         finalBotText = evaluation.safeResponse;
+      }
       }
 
       evaluation = evaluateFinalText(finalBotText);

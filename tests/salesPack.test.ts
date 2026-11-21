@@ -246,6 +246,7 @@ describe('Sales Pack base', () => {
     expect(warranty.documents[0].id).toBe('warranty');
 
     expect(knowledge.search('color favorito').found).toBe(false);
+    expect(knowledge.search('vehículo', 1).documents.length).toBeLessThanOrEqual(1);
   });
 
   it('expone search_knowledge en el registry del pack', async () => {
