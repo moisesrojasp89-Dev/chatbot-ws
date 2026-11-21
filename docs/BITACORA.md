@@ -31,7 +31,7 @@
 | 55923ea | **Ola 4A.3:** guardrails de ventas (precio/crédito/disponibilidad/test drive/descuento) y 10 escenarios adversariales. | 222 tests | PASS con reservas; residuales corregidos |
 | 621c6a1 | **Ola 4A.3b:** endurecer negaciones, test drive por tool, bolívares y formatos mixtos. | 225 tests | PASS con reservas; residuales corregidos |
 | 1948f0a | **Ola 4A.4:** catálogo semántico (sinónimos/fuzzy), guardrail de alcance y cuota por conversación. | 232 tests | PASS con reservas; residuales corregidos |
-| pendiente | **Ola 4A.4b:** subir techo a 100k y contar tokens del outbox pendiente con máximo, no solo historial. | 232 tests | Pendiente de cierre |
+| 77e9920 | **Ola 4A.4b:** subir techo a 100k y contar tokens del outbox pendiente con máximo, no solo historial. | 232 tests | PASS |
 
 ### Decisiones registradas
 
