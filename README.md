@@ -5,7 +5,7 @@
 [![LLM](https://img.shields.io/badge/LLM-Provider_Agnostic-blueviolet.svg)](#-arquitectura-dual-daemon--harness-con-rigor-de-ingeniería)
 [![PostgreSQL](https://img.shields.io/badge/PostgreSQL-16-blue.svg)](https://www.postgresql.org/)
 [![Multichannel](https://img.shields.io/badge/Channels-Multichannel-25D366.svg)](#-canales-y-verticales)
-[![Tests](https://img.shields.io/badge/Tests-238%2F238_Passing-success.svg)](./tests)
+[![Tests](https://img.shields.io/badge/Tests-240%2F240_Passing-success.svg)](./tests)
 [![Quality Gate](https://img.shields.io/badge/Quality_Gate-Certified_100%25-success.svg)](#-quality-gate-y-certificación-institucional)
 
 Plataforma **omnicanal** de atención, ventas y automatización con IA para empresas de LATAM. Un solo núcleo conversacional —memoria, FSM, guardrails y herramientas de negocio— está diseñado para operar sobre **WhatsApp, Instagram, Telegram, TikTok o canales propios**, con motor LLM intercambiable y sin lock-in de proveedor.
@@ -52,7 +52,7 @@ $$\text{Plataforma Omnicanal} = \text{Capa de Canales} + \text{Pipeline Inbound 
    * **Presupuesto ReAct & AbortSignal:** `deadlineMs` global de 24s distribuido entre turnos para nunca exceder el lease de 30s.
    * **Readiness Probe (`GET /ready`):** Monitoreo de salud operativa para orquestadores de contenedores (Kubernetes/Docker).
 4. **Seguridad y Privacidad LGPD / GDPR:**
-   * **Row Level Security (RLS):** Habilitado en todas las tablas sensibles del esquema `public` con revocación de privilegios para roles `anon` y `authenticated` (Migraciones 001 a 018).
+   * **Row Level Security (RLS):** Habilitado en todas las tablas sensibles del esquema `public` con revocación de privilegios para roles `anon` y `authenticated` (Migraciones 001 a 019).
    * **Sanitizador Recursivo de Logs:** Enmascaramiento automático de teléfonos E.164, tokens Bearer y API keys.
 5. **Harness Agéntico & Guardrails Multi-Nivel:**
    * Grounding Lock por código (mitigación de alucinaciones de precios).
@@ -88,14 +88,14 @@ Chatbot WS/
 ├── src/
 │   ├── config/                  # Constantes y variables de entorno validadas con Zod
 │   ├── controllers/             # Gateway Webhook Meta con HMAC SHA-256 y reconciliación de estados
-│   ├── database/                # Migraciones DDL SQL (001 a 018) y runner automatizado
+│   ├── database/                # Migraciones DDL SQL (001 a 019) y runner automatizado
 │   ├── harness/                 # Motor Agéntico, Context Manager, Tools y Guardrails
 │   ├── middleware/              # Rate Limiter Token Bucket por teléfono
 │   ├── providers/               # Clientes externos (PostgreSQL, proveedor LLM, adaptadores de canal)
 │   ├── repositories/            # Repositorios SQL (Inbound, Outbox, Contact, Conversation, Message, etc.)
 │   ├── services/                # Daemons asíncronos (InboundDispatcher, OutboxDispatcher, RetentionService)
 │   └── utils/                   # Circuit Breaker, crypto HMAC, logger estructurado con sanitizador PII
-└── tests/                       # Suite de 29 archivos de pruebas con Vitest (238/238 passing)
+└── tests/                       # Suite de 29 archivos de pruebas con Vitest (240/240 passing)
 ```
 
 ---
@@ -112,7 +112,7 @@ El script ejecuta 4 verificaciones deterministas:
 1. **Compilación TypeScript AST:** `tsc --noEmit` (0 errores, 0 advertencias, prohibido `any` indiscriminado).
 2. **Escaneo Zero-Trust:** Inspección exhaustiva contra tokens reales de Meta, API keys del proveedor LLM y credenciales en texto plano.
 3. **Integridad de Configuración & Harness:** Validación bidireccional entre `.env.example`, `.gitignore`, `src/config/env.ts` y `AGENTS.md`.
-4. **Suite Completa de Pruebas Unitarias/Integración:** `vitest run` ejecutando las 238 pruebas automatizadas al 100%.
+4. **Suite Completa de Pruebas Unitarias/Integración:** `vitest run` ejecutando las 240 pruebas automatizadas al 100%.
 
 ---
 
@@ -160,7 +160,7 @@ BACKLOG_ALERT_THRESHOLD=100
 > 📜 Bitácora cronológica de cambios y decisiones: [**BITACORA.md**](docs/BITACORA.md)
 
 ### 4. Migraciones de Base de Datos
-Ejecuta las migraciones incrementales (001 a 018):
+Ejecuta las migraciones incrementales (001 a 019):
 ```bash
 npm run migrate
 ```
@@ -186,7 +186,7 @@ npm run quality-gate
 
 ```bash
  Test Files  29 passed (29)
-      Tests  238 passed (238)
+      Tests  240 passed (240)
    Coverage  Pipelines Inbound/Outbox, Circuit Breakers, Guardrails, Webhook HMAC, Multi-Tenant RLS
 ```
 

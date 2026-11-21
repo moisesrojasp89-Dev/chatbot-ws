@@ -2,6 +2,7 @@ import crypto from 'node:crypto';
 import { z } from 'zod';
 import {
   ChannelAdapter,
+  ChannelMediaRequest,
   ChannelSendError,
   ChannelSendRequest,
   ChannelSendResult,
@@ -326,6 +327,56 @@ export class TelegramChannelSender implements ChannelAdapter {
     }
   }
 
+  public async sendMedia(request: ChannelMediaRequest): Promise<ChannelSendResult> {
+    try {
+      const { botToken } = getTelegramConfig();
+      const endpoint =
+        request.mediaType === 'image'
+          ? 'sendPhoto'
+          : request.mediaType === 'video'
+            ? 'sendVideo'
+            : request.mediaType === 'audio'
+              ? 'sendAudio'
+              : 'sendDocument';
+      const field =
+        request.mediaType === 'image'
+          ? 'photo'
+          : request.mediaType === 'video'
+            ? 'video'
+            : request.mediaType === 'audio'
+              ? 'audio'
+              : 'document';
+
+      const response = await fetch(`https://api.telegram.org/bot${botToken}/${endpoint}`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          chat_id: request.recipientId,
+          [field]: request.mediaUrl,
+          caption: request.caption?.slice(0, 1024),
+        }),
+        signal: AbortSignal.timeout(15000),
+      });
+
+      const body = (await response.json().catch(() => null)) as TelegramApiResponse | null;
+      if (!response.ok) {
+        throw mapTelegramError(response.status, body, 'Respuesta inválida de Telegram');
+      }
+      if (!body?.ok || typeof body.result?.message_id !== 'number') {
+        throw new ChannelSendError('TRANSIENT', 'Telegram devolvió 200 sin message_id utilizable', {
+          status: response.status,
+        });
+      }
+
+      return { externalMessageId: `tg:out:${request.recipientId}:${body.result.message_id}` };
+    } catch (error) {
+      if (error instanceof ChannelSendError) throw error;
+      if (error instanceof TelegramConfigError) {
+        throw new ChannelSendError('SYSTEMIC_AUTH', error.message, { cause: error });
+      }
+      throw new ChannelSendError('NETWORK', 'Telegram media network error (request failed)');
+    }
+  }
   public async sendTyping(accountId: string, recipientId: string): Promise<void> {
     try {
       const { botToken } = getTelegramConfig();

@@ -13,6 +13,7 @@ export interface EnqueueMessageParams {
   recipientPhone: string;
   messageType?: string;
   content: string;
+  mediaUrl?: string | null;
   promptTokens?: number;
   completionTokens?: number;
   latencyMs?: number;
@@ -32,9 +33,10 @@ export class OutboxRepository {
     const query = `
       INSERT INTO public.outbox_messages (
         conversation_id, phone_number_id, recipient_phone, message_type,
-        content, status, prompt_tokens, completion_tokens, latency_ms, max_retries, channel
+        content, status, prompt_tokens, completion_tokens, latency_ms, max_retries, channel,
+        media_url
       )
-      VALUES ($1, $2, $3, $4, $5, 'PENDING', $6, $7, $8, $9, $10)
+      VALUES ($1, $2, $3, $4, $5, 'PENDING', $6, $7, $8, $9, $10, $11)
       RETURNING *;
     `;
     const values = [
@@ -48,6 +50,7 @@ export class OutboxRepository {
       params.latencyMs || 0,
       maxRetries,
       normalizeChannelName(params.channel),
+      params.mediaUrl ?? null,
     ];
 
     const result = client

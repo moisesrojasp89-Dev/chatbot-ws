@@ -546,13 +546,25 @@ export class OutboxDispatcher {
     let externalMessageId: string;
     try {
       const sendResult = await breaker.execute(
-        async () =>
-          sender.sendText({
+        async () => {
+          if (record.media_url && sender.sendMedia) {
+            return sender.sendMedia({
+              accountId: record.phone_number_id,
+              recipientId: record.recipient_phone,
+              mediaUrl: record.media_url,
+              mediaType: record.message_type as 'image' | 'document' | 'video' | 'audio',
+              caption: record.content || undefined,
+              outboxId: record.id,
+            });
+          }
+
+          return sender.sendText({
             accountId: record.phone_number_id,
             recipientId: record.recipient_phone,
             text: record.content,
             outboxId: record.id,
-          }),
+          });
+        },
         (error) => {
           // Solo errores transitorios del canal cuentan para abrir el Circuit Breaker
           if (error instanceof ChannelSendError) {

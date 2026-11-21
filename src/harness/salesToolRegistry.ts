@@ -286,6 +286,48 @@ export function buildSalesToolRegistry(pack: BusinessPack | null): ToolRegistry 
   });
 
   registry.register({
+    name: 'send_catalog_image',
+    description: 'Envía al cliente la foto principal de un vehículo del catálogo.',
+    effect: 'media',
+    parameters: {
+      type: 'object',
+      properties: {
+        vehicleId: { type: 'string' },
+        caption: { type: 'string' },
+      },
+      required: ['vehicleId'],
+    },
+    inputSchema: z.object({
+      vehicleId: z.string().min(1),
+      caption: z.string().max(900).optional(),
+    }),
+    execute: (input) => {
+      const vehicle = catalog.get(input.vehicleId);
+      if (!vehicle) throw new Error('Vehículo no encontrado en el catálogo');
+      const image = vehicle.images?.[0];
+      if (!image) throw new Error('El vehículo no tiene imagen disponible');
+
+      let parsed: URL;
+      try {
+        parsed = new URL(image);
+      } catch {
+        throw new Error('La imagen del catálogo no es una URL válida');
+      }
+      if (parsed.protocol !== 'https:') {
+        throw new Error('La imagen debe usar HTTPS para enviarse por el canal');
+      }
+
+      return {
+        queued: true,
+        media: {
+          mediaUrl: parsed.toString(),
+          mediaType: 'image' as const,
+          caption: input.caption,
+        },
+      };
+    },
+  });
+  registry.register({
     name: 'search_knowledge',
     description: 'Busca políticas, garantía, financiamiento y preguntas frecuentes del negocio.',
     parameters: {

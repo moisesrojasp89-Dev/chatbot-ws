@@ -20,6 +20,12 @@ export interface AgentProcessOptions {
   channel?: string;
 }
 
+export interface PendingOutboundMedia {
+  mediaUrl: string;
+  mediaType: 'image' | 'document' | 'video' | 'audio';
+  caption?: string;
+}
+
 export interface AgentProcessResult {
   replyText: string;
   catalogToolExecuted: boolean;
@@ -27,6 +33,7 @@ export interface AgentProcessResult {
   handoffToolExecuted: boolean;
   pendingLead?: CreateQualifiedLeadArgs;
   pendingHandoff?: RequestHumanHandoffArgs;
+  pendingMedia?: PendingOutboundMedia;
   promptTokens: number;
   completionTokens: number;
   totalLatencyMs: number;
@@ -115,6 +122,7 @@ export class AgentEngine {
     let handoffToolExecuted = false;
     let pendingLead: CreateQualifiedLeadArgs | undefined;
     let pendingHandoff: RequestHumanHandoffArgs | undefined;
+    let pendingMedia: PendingOutboundMedia | undefined;
     const executedTools = new Set<string>();
     let totalPromptTokens = 0;
     let totalCompletionTokens = 0;
@@ -205,6 +213,9 @@ export class AgentEngine {
                 conversationId: conversation.id,
               };
             }
+          } else if (definition.effect === 'media') {
+            const media = (toolOutput as { media?: PendingOutboundMedia }).media;
+            if (media) pendingMedia = media;
           } else if (definition.effect === 'handoff') {
             handoffToolExecuted = true;
             if (options?.deferSideEffects) {
@@ -242,6 +253,10 @@ export class AgentEngine {
     }
 
     // Si después de 3 iteraciones de herramientas aún no hay texto final, establecer fallback cortés
+    if (!finalBotText && pendingMedia) {
+      finalBotText = pendingMedia.caption ?? 'Te comparto la imagen del vehículo.';
+    }
+
     if (!finalBotText && (catalogToolExecuted || leadToolExecuted || handoffToolExecuted)) {
       finalBotText =
         'He verificado la información en nuestro sistema. ¿En qué más puedo orientarte o deseas que un asesor te asista directamente?';
@@ -358,6 +373,7 @@ No repitas la infracción. Mantén el idioma, el tono y la brevedad.
       handoffToolExecuted,
       pendingLead,
       pendingHandoff,
+      pendingMedia,
       promptTokens: totalPromptTokens,
       completionTokens: totalCompletionTokens,
       totalLatencyMs,

@@ -51,6 +51,7 @@ export interface MessageRecord {
   direction: 'INBOUND' | 'OUTBOUND';
   message_type: string;
   content: string;
+  media_url?: string | null;
   raw_payload: Record<string, unknown>;
   prompt_tokens: number;
   completion_tokens: number;
@@ -71,6 +72,7 @@ export interface OutboxRecord {
   recipient_phone: string;
   message_type: string;
   content: string;
+  media_url?: string | null;
   status: OutboxStatus;
   retry_count: number;
   max_retries: number;

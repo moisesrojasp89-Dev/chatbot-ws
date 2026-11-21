@@ -131,6 +131,7 @@ describe('Sales Pack base', () => {
         'quote_vehicle',
         'schedule_test_drive',
         'capture_trade_in',
+        'send_catalog_image',
         'capture_lead',
         'handoff_to_advisor',
       ])
@@ -258,5 +259,21 @@ describe('Sales Pack base', () => {
 
     expect(result.found).toBe(true);
     expect(result.documents[0].id).toBe('test-drive');
+  });
+  it('prepara una imagen del catálogo para el outbox con URL HTTPS', async () => {
+    const pack = await loadBusinessPack(packPath);
+    const registry = buildSalesToolRegistry(pack);
+    const result = (await registry.execute('send_catalog_image', {
+      vehicleId: 'suv-001',
+      caption: 'Toyota RAV4 2023',
+    })) as {
+      queued: boolean;
+      media: { mediaUrl: string; mediaType: string; caption?: string };
+    };
+
+    expect(result.queued).toBe(true);
+    expect(result.media.mediaType).toBe('image');
+    expect(result.media.mediaUrl).toMatch(/^https:\/\//);
+    expect(result.media.caption).toContain('RAV4');
   });
 });

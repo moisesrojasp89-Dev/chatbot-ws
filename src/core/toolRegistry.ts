@@ -1,7 +1,7 @@
 import { z } from 'zod';
 import { LlmTool } from '../providers/llm/llmTypes.js';
 
-export type ToolEffect = 'catalog' | 'lead' | 'handoff';
+export type ToolEffect = 'catalog' | 'lead' | 'handoff' | 'media';
 
 export interface ToolDefinition<TInput = unknown> {
   name: string;

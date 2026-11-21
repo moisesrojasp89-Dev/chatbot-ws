@@ -57,7 +57,7 @@ Copia `.env.example` a `.env` y completa:
 ```bash
 npm ci
 cp .env.example .env      # completar variables
-npm run migrate           # aplica 001 → 018
+npm run migrate           # aplica 001 → 019
 npm run build
 npm test
 npm run quality-gate
@@ -77,7 +77,7 @@ curl -s http://localhost:3000/ready
 
 ### Estado actual
 
-- Migraciones: **001 → 018**.
+- Migraciones: **001 → 019**.
 - La **015** cambia `UNIQUE(wamid)` por `UNIQUE(channel, wamid)` en `inbound_events`.
 - La **016** backfillea payloads inbound legados al sobre normalizado. Requiere la misma ventana que la 015: `stop → migrate → start`.
 - La **017** agrega `recipient_id` y lo backfillea con `sender_phone`. Permite responder al chat del grupo sin perder la identidad del remitente.
@@ -97,7 +97,7 @@ WHERE conrelid = 'public.inbound_events'::regclass
 
 En una base descartable del proyecto de pruebas se validó:
 
-- `npm run migrate` aplicó **001 → 018** (18/18) en una base vacía.
+- `npm run migrate` aplicó **001 → 019** (19/19) en una base vacía.
 - Una fila legada con shape Meta se backfilleó correctamente: `text`, `type`, `senderName`, `occurredAt` en UTC y `raw` = mensaje original; segunda pasada idempotente (0 filas).
 - `assertSchemaReady`, `GET /health` y `GET /ready` respondieron OK contra esa base.
 - La base descartable se eliminó al finalizar.

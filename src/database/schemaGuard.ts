@@ -17,6 +17,7 @@ const REQUIRED_MIGRATIONS = [
   '016_backfill_normalized_inbound_payload.sql',
   '017_inbound_recipient_id.sql',
   '018_conversations_chat_scope.sql',
+  '019_outbox_media.sql',
 ];
 
 /**
@@ -62,7 +63,7 @@ export async function assertSchemaReady(): Promise<void> {
        FROM information_schema.columns
        WHERE table_schema = 'public'
          AND table_name IN ('inbound_events', 'outbox_messages', 'conversations')
-         AND column_name IN ('channel', 'recipient_id', 'chat_id');`
+         AND column_name IN ('channel', 'recipient_id', 'chat_id', 'media_url');`
     );
     const found = new Set(
       (columns.rows as Array<{ table_name: string; column_name: string }>).map(
@@ -80,6 +81,9 @@ export async function assertSchemaReady(): Promise<void> {
     }
     if (!found.has('conversations.chat_id')) {
       issues.push('Falta la columna chat_id en public.conversations (migración 018).');
+    }
+    if (!found.has('outbox_messages.media_url')) {
+      issues.push('Falta la columna media_url en public.outbox_messages (migración 019).');
     }
   } catch (error) {
     issues.push(`No se pudieron inspeccionar las columnas de canal: ${(error as Error).message}`);
@@ -116,5 +120,5 @@ export async function assertSchemaReady(): Promise<void> {
     throw new SchemaValidationError(issues);
   }
 
-  logger.info('🧱 Esquema validado: migraciones 014-017, columnas channel/recipient y unicidad por canal');
+  logger.info('🧱 Esquema validado: migraciones 014-019, columnas channel/recipient y unicidad por canal');
 }

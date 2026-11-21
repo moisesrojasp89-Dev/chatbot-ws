@@ -23,6 +23,17 @@ export interface ChannelSendRequest {
   outboxId?: string;
 }
 
+export type OutboundMediaType = 'image' | 'document' | 'video' | 'audio';
+
+export interface ChannelMediaRequest {
+  accountId: string;
+  recipientId: string;
+  mediaUrl: string;
+  mediaType: OutboundMediaType;
+  caption?: string;
+  outboxId?: string;
+}
+
 export interface ChannelSendResult {
   /** Id externo del mensaje aceptado por el proveedor (wamid en WhatsApp). */
   externalMessageId: string;
@@ -66,6 +77,8 @@ export function isTransientChannelError(error: unknown): boolean {
 export interface ChannelSender {
   readonly channel: string;
   sendText(request: ChannelSendRequest): Promise<ChannelSendResult>;
+  /** Opcional: canales con soporte de media saliente por URL pública. */
+  sendMedia?(request: ChannelMediaRequest): Promise<ChannelSendResult>;
   /** Opcional: solo canales que soportan indicador de escritura/presencia. */
   sendTyping?(accountId: string, recipientId: string): Promise<void>;
 }

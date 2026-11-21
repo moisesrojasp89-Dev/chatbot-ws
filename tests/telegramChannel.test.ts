@@ -186,4 +186,25 @@ describe('Canal Telegram: ingress', () => {
     expect((error as Error).message).toContain('Telegram media download failed');
     expect((error as Error).message).not.toContain(token);
   });
+  it('envía una imagen por URL pública como sendPhoto', async () => {
+    vi.spyOn(globalThis, 'fetch').mockResolvedValueOnce(
+      new Response(JSON.stringify({ ok: true, result: { message_id: 77 } }), {
+        status: 200,
+        headers: { 'Content-Type': 'application/json' },
+      })
+    );
+
+    const result = await telegramChannelSender.sendMedia({
+      accountId: 'bot',
+      recipientId: '12345',
+      mediaUrl: 'https://example.com/vehiculo.jpg',
+      mediaType: 'image',
+      caption: 'Toyota RAV4',
+    });
+
+    expect(result.externalMessageId).toBe('tg:out:12345:77');
+    const [url, init] = vi.mocked(globalThis.fetch).mock.calls[0];
+    expect(String(url)).toContain('/sendPhoto');
+    expect(String(init?.body)).toContain('https://example.com/vehiculo.jpg');
+  });
 });

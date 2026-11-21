@@ -1,6 +1,7 @@
 import crypto from 'node:crypto';
 import {
   ChannelAdapter,
+  ChannelMediaRequest,
   ChannelSendError,
   ChannelSendRequest,
   ChannelSendResult,
@@ -162,6 +163,21 @@ export class MetaChannelSender implements ChannelAdapter {
     }
   }
 
+  public async sendMedia(request: ChannelMediaRequest): Promise<ChannelSendResult> {
+    try {
+      getMetaConfig();
+      const externalMessageId = await whatsappClient.sendMediaMessage(
+        request.accountId,
+        request.recipientId,
+        request.mediaType,
+        request.mediaUrl,
+        request.caption
+      );
+      return { externalMessageId };
+    } catch (error) {
+      throw mapMetaError(error);
+    }
+  }
   public async sendTyping(accountId: string, recipientId: string): Promise<void> {
     await whatsappClient.sendTypingIndicator(accountId, recipientId);
   }

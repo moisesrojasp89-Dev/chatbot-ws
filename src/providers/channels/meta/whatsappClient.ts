@@ -139,6 +139,75 @@ export class WhatsAppClient {
   }
 
   /**
+   * Envía media por URL pública. Meta descarga la URL; no acepta rutas locales.
+   */
+  public async sendMediaMessage(
+    phoneNumberId: string,
+    to: string,
+    mediaType: 'image' | 'document' | 'video' | 'audio',
+    mediaUrl: string,
+    caption?: string
+  ): Promise<string> {
+    const url = `${this.baseUrl}/${phoneNumberId}/messages`;
+    const { accessToken } = getMetaConfig();
+
+    if (
+      env.NODE_ENV === 'test' &&
+      (accessToken.startsWith('test_') ||
+        accessToken.includes('TEST_TOKEN') ||
+        accessToken.startsWith('EAAB_TEST_'))
+    ) {
+      return `wamid.HBgL_MEDIA_${Date.now()}_${Math.random().toString(36).slice(2, 7)}==`;
+    }
+
+    const mediaPayload: Record<string, unknown> = { link: mediaUrl };
+    if (caption && mediaType !== 'audio') mediaPayload.caption = caption;
+
+    try {
+      const response = await fetch(url, {
+        method: 'POST',
+        headers: {
+          Authorization: `Bearer ${accessToken}`,
+          'Content-Type': 'application/json',
+        },
+        signal: AbortSignal.timeout(15000),
+        body: JSON.stringify({
+          messaging_product: 'whatsapp',
+          recipient_type: 'individual',
+          to,
+          type: mediaType,
+          [mediaType]: mediaPayload,
+        }),
+      });
+
+      if (!response.ok) {
+        const errorBody = await response.text();
+        logger.error(
+          { status: response.status, errorBody, to, phoneNumberId },
+          '❌ Error al despachar media a Meta WhatsApp Cloud API'
+        );
+        throw new MetaGraphApiError(response.status, errorBody);
+      }
+
+      const data = (await response.json()) as SendMessageResponse;
+      const wamid = data.messages?.[0]?.id;
+      if (!wamid) throw new Error('Meta Graph API no retornó wamid en la respuesta');
+      return wamid;
+    } catch (error) {
+      if (error instanceof MetaGraphApiError) throw error;
+      const isTimeout =
+        error instanceof Error &&
+        (error.name === 'AbortError' || error.name === 'TimeoutError');
+      const message = isTimeout
+        ? 'Meta API Request Timeout (15s abort)'
+        : error instanceof Error
+          ? error.message
+          : String(error);
+      throw new MetaGraphApiError(0, message);
+    }
+  }
+
+  /**
    * Envía el indicador "typing..." a la API de Meta para simular presencia humana activa.
    */
   public async sendTypingIndicator(phoneNumberId: string, to: string): Promise<void> {
