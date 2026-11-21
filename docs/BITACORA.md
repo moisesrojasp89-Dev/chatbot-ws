@@ -27,7 +27,7 @@
 | 947f284 | **Ola 4A.1:** base de Sales Pack — perfil validado, catálogo JSON, ToolRegistry y pack automotriz seed. | 214 tests | Pendiente de cableado al motor |
 | 1e66a40 | **4A.1 fix:** schema estricto, catálogo sin agotados/total, confinamiento del pack y JSON Schema anidado. | 215 tests | PASS con reservas; residuales corregidos |
 | c61fd09 | **Ola 4A.2:** pack cableado al motor — prompt por perfil/canal, catálogo del pack y tools por registry. | 218 tests | PASS con reservas; residuales corregidos |
-| pendiente | **Ola 4A.2b:** tools de cotización, test drive y permuta con lead diferido. | 219 tests | Pendiente de cierre |
+| c5c3281 | **Ola 4A.2b:** tools de cotización, test drive y permuta con lead diferido. | 219 tests | PASS |
 
 ### Decisiones registradas
 
