@@ -70,6 +70,7 @@ La documentación está organizada bajo el estándar de **Modularización Jerár
 | [**`AUTOMOTIVE_PACK_SPEC.md`**](file:///c:/Users/indatech/Desktop/Chatbot%20WS/docs/packs/AUTOMOTIVE_PACK_SPEC.md) | Especificación del pack piloto automotriz: catálogo, tools, flujos, evaluación. Solo para pruebas. | L1 - Pack |
 | [**`SALES_GUARDRAILS.md`**](file:///c:/Users/indatech/Desktop/Chatbot%20WS/docs/product/SALES_GUARDRAILS.md) | Guardrails deterministas y 10 escenarios adversariales de venta. | L1 - Harness |
 | [**SEMANTIC_LAYER_Y_CUOTAS.md**](file:///c:/Users/indatech/Desktop/Chatbot%20WS/docs/product/SEMANTIC_LAYER_Y_CUOTAS.md) | Catálogo semántico, fallback, alcance y cuotas anti-bucle. | L1 - Harness |
+| [**AUDITORIA_CAMBIOS_Y_NORTE.md**](file:///c:/Users/indatech/Desktop/Chatbot%20WS/docs/product/AUDITORIA_CAMBIOS_Y_NORTE.md) | Auditoría del diff, valor real, regresión de monolitos y norte del proyecto. | L0 - Producto |
 
 ---
 
