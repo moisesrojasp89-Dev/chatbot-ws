@@ -134,7 +134,7 @@
 * **Contra-Medida Permanente:**
   - `src/utils/databaseGuard.ts`: ref exigido resuelto desde `TEST_PROJECT_REF` (fallback `DEFAULT_TEST_PROJECT_REF`), evaluado en tiempo de ejecución para que `dotenv` ya esté cargado.
   - `src/config/env.ts` y `.env.example`: `TEST_PROJECT_REF` validado/documentado, con advertencia de no apuntar a producción.
-  - Proyecto de pruebas dedicado `chatbot-ws-test` (ref de 20 caracteres) reconstruido con las 18 migraciones, RLS en las 10 tablas y 219 pruebas en verde.
+  - Proyecto de pruebas dedicado `chatbot-ws-test` (ref de 20 caracteres) reconstruido con las 18 migraciones, RLS en las 10 tablas y 222 pruebas en verde.
   - `.github/workflows/supabase-keepalive.yml`: consulta `select now()` y el conteo de migraciones cada 5 días para evitar la pausa del plan FREE; requiere el secreto `SUPABASE_DB_URL` con el Session Pooler (puerto 5432).
   - Documentación de arquitectura corregida: ya no afirma que el proyecto eliminado sigue vivo y usa Session Pooler 5432 para migraciones (`pg_advisory_lock` de sesión).
 * **Candado de Regresión (Tripwire):**

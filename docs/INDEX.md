@@ -68,6 +68,7 @@ La documentación está organizada bajo el estándar de **Modularización Jerár
 | :--- | :--- | :---: |
 | [**`SALES_READINESS_AUDIT.md`**](file:///c:/Users/indatech/Desktop/Chatbot%20WS/docs/product/SALES_READINESS_AUDIT.md) | Auditoría de readiness del bot de ventas: qué es genérico, qué está sesgado y qué falta para un piloto real. | L1 - Producto |
 | [**`AUTOMOTIVE_PACK_SPEC.md`**](file:///c:/Users/indatech/Desktop/Chatbot%20WS/docs/packs/AUTOMOTIVE_PACK_SPEC.md) | Especificación del pack piloto automotriz: catálogo, tools, flujos, evaluación. Solo para pruebas. | L1 - Pack |
+| [**`SALES_GUARDRAILS.md`**](file:///c:/Users/indatech/Desktop/Chatbot%20WS/docs/product/SALES_GUARDRAILS.md) | Guardrails deterministas y 10 escenarios adversariales de venta. | L1 - Harness |
 
 ---
 

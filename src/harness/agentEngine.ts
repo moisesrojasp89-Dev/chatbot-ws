@@ -6,6 +6,8 @@ import { contextManager } from './contextManager.js';
 import { guardrails } from './guardrails.js';
 import { getActiveBusinessPack } from '../core/activePack.js';
 import { buildSalesToolRegistry } from './salesToolRegistry.js';
+import { checkSalesPolicy } from './salesGuardrails.js';
+import { OFFICIAL_CATALOG } from './tools/catalogTools.js';
 import { logger } from '../utils/logger.js';
 
 import { CreateQualifiedLeadArgs } from './tools/leadTools.js';
@@ -234,6 +236,20 @@ export class AgentEngine {
     const denylistCheck = guardrails.checkPostInferenceDenylist(finalBotText);
     if (!denylistCheck.passed && denylistCheck.sanitizedResponse) {
       finalBotText = denylistCheck.sanitizedResponse;
+    }
+
+    // 6. Guardrail de ventas: precios, crédito, disponibilidad, test drive y descuentos
+    const allowedPrices = pack
+      ? pack.catalog.map((item) => item.price)
+      : OFFICIAL_CATALOG.map((item) => item.priceUSD);
+    const salesCheck = checkSalesPolicy(finalBotText, {
+      catalogToolExecuted,
+      leadToolExecuted,
+      handoffToolExecuted,
+      allowedPrices,
+    });
+    if (!salesCheck.passed && salesCheck.sanitizedResponse) {
+      finalBotText = salesCheck.sanitizedResponse;
     }
 
     const totalLatencyMs = Date.now() - startEngineTime;
